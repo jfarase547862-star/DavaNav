@@ -2,8 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { SiteFooter, SiteHeader } from '@/components/site-layout';
 import { ScanLine, Camera, QrCode } from 'lucide-react';
-import { offices } from '@/lib/mock-data';
-
+import { seedOffices } from "@/lib/mock-data";
 const BLUE = '#1a4fa0';
 
 export default function Scan() {
@@ -13,14 +12,14 @@ export default function Scan() {
   useEffect(() => {
     if (!scanning) return;
     const t = setTimeout(() => {
-      const pick = offices[Math.floor(Math.random() * offices.length)];
+      const pick = seedOffices[Math.floor(Math.random() * seedOffices.length)];
       setMatched(pick.id);
       setScanning(false);
     }, 2200);
     return () => clearTimeout(t);
   }, [scanning]);
 
-  const match = offices.find((o) => o.id === matched);
+  const match = seedOffices.find((o) => o.id === matched);
 
   return (
     <div className="flex min-h-screen flex-col" style={{ background: '#f8f9fb' }}>

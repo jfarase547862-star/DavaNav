@@ -1,4 +1,4 @@
-import { offices, type Office } from '@/lib/mock-data';
+import { type Office, seedOffices } from '@/lib/mock-data';
 import { MapPin, Navigation } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -10,15 +10,23 @@ type Props = {
   startCoord?: { x: number; y: number };
 };
 
+function toFloorNumber(floor: number | string): number {
+  return typeof floor === 'string' ? parseInt(floor, 10) : floor;
+}
+
 export function FloorMap({ floor, highlightId, showRoute, onSelect, startCoord = { x: 50, y: 95 } }: Props) {
-  const floorOffices = useMemo(() => offices.filter((office) => office.floor === floor), [floor]);
-  const dest = offices.find((office) => office.id === highlightId);
+  const floorOffices = useMemo(
+    () => seedOffices.filter((office) => toFloorNumber(office.floor) === floor && office.coords),
+    [floor],
+  );
+  const dest = seedOffices.find((office) => office.id === highlightId);
+  const destOnThisFloor = dest && dest.coords && toFloorNumber(dest.floor) === floor;
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-border bg-card shadow-card">
       <div className="flex items-center justify-between border-b border-border bg-secondary/50 px-4 py-2 text-sm">
         <div className="font-semibold">Floor {floor}</div>
-        <div className="text-muted-foreground">{floorOffices.length} offices</div>
+        <div className="text-muted-foreground">{floorOffices.length} seedOffices</div>
       </div>
       <svg viewBox="0 0 100 100" className="block aspect-[5/3] w-full bg-gradient-soft">
         <defs>
@@ -33,7 +41,7 @@ export function FloorMap({ floor, highlightId, showRoute, onSelect, startCoord =
         <rect x="46" y="88" width="6" height="3" fill="oklch(0.62 0.15 155)" />
         <text x="50" y="98" textAnchor="middle" fontSize="2.4" fill="oklch(0.5 0.03 250)">ENTRANCE</text>
 
-        {showRoute && dest && dest.floor === floor && (
+        {showRoute && destOnThisFloor && dest?.coords && (
           <g>
             <path
               d={`M ${startCoord.x} ${startCoord.y} L ${startCoord.x} 51 L ${dest.coords.x} 51 L ${dest.coords.x} ${dest.coords.y}`}
@@ -50,6 +58,7 @@ export function FloorMap({ floor, highlightId, showRoute, onSelect, startCoord =
         )}
 
         {floorOffices.map((office) => {
+          if (!office.coords) return null;
           const isDest = office.id === highlightId;
           return (
             <g key={office.id} onClick={() => onSelect?.(office)} style={{ cursor: onSelect ? 'pointer' : 'default' }}>

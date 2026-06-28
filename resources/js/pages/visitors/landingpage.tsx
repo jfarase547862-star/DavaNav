@@ -61,18 +61,7 @@ export default function LandingPage() {
                 </Button>
               </div>
 
-              <dl className="mt-10 grid grid-cols-3 gap-6 border-t border-slate-200 pt-6 text-sm text-slate-600">
-                {[
-                  { label: 'Offices', value: '8+' },
-                  { label: 'Visitors', value: '12K+' },
-                  { label: 'Avg. time saved', value: '7m' },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <dt className="uppercase tracking-[0.35em] text-[10px] text-slate-500">{s.label}</dt>
-                    <dd className="mt-1 text-2xl font-bold text-slate-950">{s.value}</dd>
-                  </div>
-                ))}
-              </dl>
+             
             </div>
 
             {/* Right card */}
@@ -135,11 +124,8 @@ export default function LandingPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[
               { icon: QrCode,      t: 'QR Code Navigation',    d: 'Each office has a unique QR code. Scan to instantly view location and directions.' },
-              { icon: Search,      t: 'Smart Search',          d: 'Instant search with autocomplete for offices, departments, and services.' },
               { icon: MapPin,      t: 'Interactive Floor Maps', d: 'See routes highlighted directly on a clean, interactive building map.' },
               { icon: Building2,   t: 'Office Directory',      d: 'Filter by floor or department. Tap a card for full office details.' },
-              { icon: BarChart3,   t: 'Real-time Analytics',   d: 'Admins track visitor flow and most-visited offices.' },
-              { icon: Accessibility, t: 'Accessibility First', d: 'Large tap targets, high contrast, and screen-reader friendly.' },
             ].map((f) => (
               <div
                 key={f.t}
@@ -155,7 +141,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Built for public service ── */}
+        {/* ── Built for public service ──
         <section className="bg-slate-50 py-20">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
             <div>
@@ -198,9 +184,9 @@ export default function LandingPage() {
 ))}
             </div>
           </div>
-        </section>
+        </section> */}
 
-        {/* ── About / Tech stack ── */}
+        {/* ── About / Tech stack ──
         <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-start">
             <div>
@@ -227,7 +213,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
       
 

@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';  
 import { SiteFooter, SiteHeader } from '@/components/site-layout';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

@@ -2,7 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { SiteFooter, SiteHeader } from '@/components/site-layout';
 import { FloorMap } from '@/components/floor-map';
-import { offices, getOffice } from '@/lib/mock-data';
+import { seedOffices, getOffice } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Navigation, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
@@ -34,14 +34,13 @@ const pillActive: React.CSSProperties = {
 
 export default function Map() {
   const [q, setQ] = useState('');
-  const [destId, setDestId] = useState<string>(offices[0].id);
+  const [destId, setDestId] = useState<string>(seedOffices[0].id);
   const initialFloor = getOffice(destId)?.floor ?? 1;
-  const [floor, setFloor] = useState<number>(initialFloor);
-
+  const [floor, setFloor] = useState<number | string>(initialFloor);
   const dest = getOffice(destId);
   const results = useMemo(
     () =>
-      offices.filter(
+      seedOffices.filter(
         (office) => !q || office.name.toLowerCase().includes(q.toLowerCase()),
       ),
     [q],
@@ -152,9 +151,9 @@ export default function Map() {
                       <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          ~{30 + dest.floor * 20} m
+                          ~{30 + Number(dest.floor) * 20} m
                         </span>
-                        <span>~ {dest.floor + 1} min walk</span>
+                        <span>~ {Number(dest.floor) + 1} min walk</span>
                       </div>
                     </div>
 
@@ -189,7 +188,7 @@ export default function Map() {
 
                 {/* Floor map */}
                 <FloorMap
-                  floor={floor}
+                  floor={typeof floor === 'string' ? parseInt(floor, 10) : floor}
                   highlightId={dest?.floor === floor ? dest.id : undefined}
                   showRoute
                   onSelect={(office) => {
@@ -198,13 +197,13 @@ export default function Map() {
                   }}
                 />
 
-                {/* Nearby offices */}
+                {/* Nearby seedOffices */}
                 <div>
                   <h3 className="text-lg font-bold text-slate-950">
                     Nearby Offices on Floor {floor}
                   </h3>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {offices
+                    {seedOffices
                       .filter((office) => office.floor === floor)
                       .map((office) => (
                         <Link

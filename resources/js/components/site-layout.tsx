@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { QrCode } from 'lucide-react';
+import { QrCode, Menu, X } from 'lucide-react';
+import { useState } from 'react';
 
 const BLUE = '#1a4fa0';
 
@@ -10,9 +11,9 @@ const navLinks = [
   { label: 'Scan QR',   href: '/scan' },
 ];
 
-
 export function SiteHeader() {
   const { url } = usePage();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (href: string) =>
     href === '/' ? url === '/' : url.startsWith(href);
@@ -40,7 +41,7 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        {/* Nav links */}
+        {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map(({ label, href }) => {
             const active = isActive(href);
@@ -61,18 +62,63 @@ export function SiteHeader() {
           })}
         </nav>
 
+        {/* Right side */}
+        <div className="flex items-center gap-2">
+          {/* CTA — hidden on mobile */}
+          <Link
+            href="/scan"
+            className="hidden items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 sm:inline-flex"
+            style={{ background: BLUE }}
+          >
+            <QrCode className="h-4 w-4" />
+            Scan QR
+          </Link>
 
-        {/* CTA button */}
-        <Link
-          href="/scan"
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
-          style={{ background: BLUE }}
-        >
-          <QrCode className="h-4 w-4" />
-          Scan QR
-        </Link>
-
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 md:hidden"
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div className="border-t border-slate-100 bg-white px-4 pb-4 md:hidden">
+          <nav className="flex flex-col gap-1 pt-2">
+            {navLinks.map(({ label, href }) => {
+              const active = isActive(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+                  style={
+                    active
+                      ? { background: '#f1f3f5', color: '#0f172a' }
+                      : { color: '#64748b' }
+                  }
+                >
+                  {label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/scan"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
+              style={{ background: BLUE }}
+            >
+              <QrCode className="h-4 w-4" />
+              Scan QR
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -113,8 +159,7 @@ export function SiteFooter() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">For Staff</h4>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li><Link href="/admin" className="hover:text-slate-900">Admin Login</Link></li>
-              <li><Link href="/admin" className="hover:text-slate-900">Dashboard</Link></li>
+              <li><Link href="/login" className="hover:text-slate-900">Admin Login</Link></li>
             </ul>
           </div>
 
