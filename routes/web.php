@@ -1,34 +1,59 @@
 <?php
 
+use App\Http\Controllers\Visitor\OfficeController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Office;
 use Inertia\Inertia;
 
-// ── Visitor Routes ──────────────────────────────────────────
-Route::get('/', function () {
-    return Inertia::render('visitors/landingpage');
-})->name('home');
+// ── Kiosk Routes ─────────────────────────────────────────────
+Route::prefix('kiosk')->name('kiosk.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('kiosk/landingpage');
+    })->name('home');
 
-Route::get('/directory', function () {
-    return Inertia::render('visitors/directory');
-})->name('directory');
+    Route::get('/directory', function () {
+        return Inertia::render('kiosk/directory');
+    })->name('directory');
 
-Route::get('/map', function () {
-    return Inertia::render('visitors/map');
+    Route::get('/scan', function () {
+        return Inertia::render('kiosk/scan');
+    })->name('scan');
+
+  Route::get('/map', function () {
+    return Inertia::render('kiosk/map');
 })->name('map');
 
-Route::get('/scan', function () {
-    return Inertia::render('visitors/scan');
-})->name('scan');
+    Route::get('/office/{officeId}', [OfficeController::class, 'show'])
+        ->name('office.show');
+});
+// ── Mobile Routes ────────────────────────────────────────────
+Route::prefix('m')->name('mobile.')->group(function () {
+    Route::get('/home', function () {
+        return Inertia::render('mobile/home');
+    })->name('home');
 
-Route::get('/office/{officeId}', function (string $officeId) {
-    $office = Office::find($officeId);
-    abort_if(!$office, 404);
-    return Inertia::render('visitors/office', [
-        'office' => $office,
-    ]);
-})->name('office.show');
+    Route::get('/scan', function () {
+        return Inertia::render('mobile/scan');
+    })->name('scan');
+
+    Route::get('/search', function () {
+        return Inertia::render('mobile/search');
+    })->name('search');
+
+    Route::get('/navigation', function () {
+        return Inertia::render('mobile/navigation');
+    })->name('navigation');
+
+    Route::get('/office/{officeId}', [OfficeController::class, 'show'])
+        ->name('office.show');
+});
+// ── Kiosk Routes ─────────────────────────────────────────────
+Route::prefix('kiosk')->name('kiosk.')->group(function () {
+    Route::get('/map', function () {
+        return Inertia::render('mobile/map');
+    })->name('map');
+});
 
 // ── Auth Routes ─────────────────────────────────────────────
 Route::get('/login', function () {

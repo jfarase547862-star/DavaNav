@@ -5,10 +5,9 @@ import { useState } from 'react';
 const BLUE = '#1a4fa0';
 
 const navLinks = [
-  { label: 'Home',      href: '/' },
-  { label: 'Directory', href: '/directory' },
-  { label: 'Map',       href: '/map' },
-  { label: 'Scan QR',   href: '/scan' },
+  { label: 'Home',      href: '/kiosk' },
+  { label: 'Directory', href: '/kiosk/directory' },
+  { label: 'Map',       href: '/kiosk/map' },
 ];
 
 export function SiteHeader() {
@@ -16,7 +15,7 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (href: string) =>
-    href === '/' ? url === '/' : url.startsWith(href);
+    href === '/kiosk' ? url === '/kiosk' : url.startsWith(href);
 
   return (
     <header
@@ -26,7 +25,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
 
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/kiosk" className="flex items-center gap-2.5">
           <div
             className="grid h-9 w-9 place-items-center rounded-xl"
             style={{ background: BLUE }}
@@ -64,15 +63,7 @@ export function SiteHeader() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          {/* CTA — hidden on mobile */}
-          <Link
-            href="/scan"
-            className="hidden items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 sm:inline-flex"
-            style={{ background: BLUE }}
-          >
-            <QrCode className="h-4 w-4" />
-            Scan QR
-          </Link>
+          
 
           {/* Hamburger — mobile only */}
           <button
@@ -107,15 +98,7 @@ export function SiteHeader() {
                 </Link>
               );
             })}
-            <Link
-              href="/scan"
-              onClick={() => setMenuOpen(false)}
-              className="mt-2 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
-              style={{ background: BLUE }}
-            >
-              <QrCode className="h-4 w-4" />
-              Scan QR
-            </Link>
+            
           </nav>
         </div>
       )}
@@ -149,9 +132,9 @@ export function SiteFooter() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Product</h4>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li><Link href="/directory" className="hover:text-slate-900">Office Directory</Link></li>
-              <li><Link href="/map"       className="hover:text-slate-900">Interactive Map</Link></li>
-              <li><Link href="/scan"      className="hover:text-slate-900">Scan QR</Link></li>
+              <li><Link href="/kiosk" className="hover:text-slate-900">Home</Link></li>
+              <li><Link href="/kiosk/directory" className="hover:text-slate-900">Office Directory</Link></li>
+              <li><Link href="/kiosk/map" className="hover:text-slate-900">Interactive Map</Link></li>
             </ul>
           </div>
 

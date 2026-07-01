@@ -16,6 +16,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        hero: "bg-gov-blue text-gov-blue-foreground shadow-sm hover:bg-gov-blue/90",
+        gold: "bg-gov-gold text-gov-gold-foreground shadow-sm hover:bg-gov-gold/90",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -45,5 +47,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   },
 );
 Button.displayName = "Button";
+
+
 
 export { Button, buttonVariants };
