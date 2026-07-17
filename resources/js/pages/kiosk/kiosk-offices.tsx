@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { useMemo } from 'react';
-import { SiteFooter, SiteHeader } from '@/components/site-layout';
-import { FloorMap } from '@/components/floor-map';
+import { SiteFooter, SiteHeader } from '@/components/shared/site-layout';
+import { FloorMap } from '@/components/shared/floor-map';
 import { QrCodeSvg } from '@/components/ui/qr-code-svg';
 import { getOffice, seedOffices } from '@/lib/mock-data';
 import { ArrowLeft, MapPin, QrCode } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function KioskOffices() {
         <main className="flex-1">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
             <Link
-              href="/kiosk/directory"
+              href="/kiosk/kiosk-directory"
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -117,7 +117,7 @@ export default function KioskOffices() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>    
           </div>
         </main>
 

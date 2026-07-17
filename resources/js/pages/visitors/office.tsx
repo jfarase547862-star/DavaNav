@@ -1,3 +1,3 @@
-import OfficePage from '@/pages/kiosk/office';
+import OfficePage from '@/pages/kiosk/kiosk-office';
 
 export default OfficePage;

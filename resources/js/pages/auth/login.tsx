@@ -34,12 +34,18 @@ export default function Login() {
     return Object.keys(e).length === 0;
   }
 
-  function onSubmit(ev: React.FormEvent) {
-    ev.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
-    router.post('/login', { email, password, remember });
-  }
+function onSubmit(ev: React.FormEvent) {
+  ev.preventDefault();
+  if (!validate()) return;
+  setLoading(true);
+  router.post('/login', { email, password, remember }, {
+    onError: (errs) => {
+      setErrors(errs);
+      setLoading(false);
+    },
+    onFinish: () => setLoading(false),
+  });
+}
 
   return (
     <div

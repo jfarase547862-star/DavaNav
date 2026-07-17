@@ -13,6 +13,7 @@ const settingsItems = [
 	{ id: 4, name: 'System Alerts', description: 'Monitoring and alert delivery settings.', status: 'Active' },
 ];
 
+
 export default function SystemSettings() {
 	return (
 		<>
@@ -22,7 +23,7 @@ export default function SystemSettings() {
 				description="Configure system-wide policies, alerts, and security settings for the superadmin console."
 				actions={
 					<Button variant="outline" asChild>
-						<Link href="/superadmin/analytics">
+						<Link href="/superadmin/audit-logs">
 							<BarChart3 className="mr-2 h-4 w-4" /> Audit Logs
 						</Link>
 					</Button>
@@ -43,12 +44,14 @@ export default function SystemSettings() {
 								const Icon = item.icon;
 								return (
 									<div key={item.label} className="rounded-lg border border-gray-200 p-4">
-										<div className="flex items-center gap-3 text-gray-700">
-											<Icon className="h-5 w-5 text-blue-600" />
-											<div>
-												<div className="text-xs uppercase text-gray-500">{item.label}</div>
-												<div className="text-lg font-semibold">{item.value}</div>
+										<div className="flex items-center gap-3">
+											<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+												<Icon className="h-5 w-5 text-blue-600" />
 											</div>
+											<div className="text-sm text-gray-500">{item.label}</div>
+										</div>
+										<div className="mt-3 text-right text-2xl font-semibold text-gray-900">
+											{item.value}
 										</div>
 									</div>
 								);

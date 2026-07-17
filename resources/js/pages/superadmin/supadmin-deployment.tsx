@@ -27,28 +27,7 @@ export default function Deployment() {
 					</Button>
 				}
 			>
-				<div className="grid gap-4 lg:grid-cols-3">
-					{[
-						{ label: 'Current Version', value: 'v2.4.1', icon: GitBranch },
-						{ label: 'Next Release', value: 'v2.5.0', icon: Layers },
-						{ label: 'Last Deployed', value: '12 mins ago', icon: Clock },
-					].map((item) => {
-						const Icon = item.icon;
-						return (
-							<Card key={item.label}>
-								<CardContent className="space-y-2">
-									<div className="flex items-center gap-3 text-gray-700">
-										<Icon className="h-5 w-5 text-purple-600" />
-										<div>
-											<div className="text-xs uppercase text-gray-500">{item.label}</div>
-											<div className="text-lg font-semibold">{item.value}</div>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						);
-					})}
-				</div>
+
 
 				<Card className="mt-4">
 					<CardHeader>
@@ -71,7 +50,7 @@ export default function Deployment() {
 											<td className="px-4 py-3 font-medium text-gray-900">{item.version}</td>
 											<td className="px-4 py-3 text-gray-600">{item.environment}</td>
 											<td className="px-4 py-3">
-												<Badge variant="outline" className={item.status === 'Success' ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'}>
+												<Badge variant="outline" className={item.status === 'Success' ? 'text-green-700' : 'text-red-700'}>
 													{item.status}
 												</Badge>
 											</td>

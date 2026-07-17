@@ -2,9 +2,9 @@ import { Link, usePage, router } from "@inertiajs/react";
 import {
   LayoutDashboard, Building2, Building, Map, Network, QrCode, BarChart3,
   Users, ShieldCheck, Bell, Settings, LogOut, Menu, ChevronRight, ArrowLeft,
-  Search, Home, X,
+  Search, Home, X, FileText, History,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,16 +19,53 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const NAV = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/admin/offices", label: "Office Management", icon: Building2 },
-  { to: "/admin/departments", label: "Department Management", icon: Building },
-  { to: "/admin/floor-maps", label: "Floor Maps", icon: Map },
-  { to: "/admin/nodes", label: "Navigation Nodes", icon: Network },
-  { to: "/admin/qr-code", label: "QR Code Management", icon: QrCode },
-  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  exact?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [
+      { to: "/admin/admin-dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    label: "Facilities",
+    items: [
+      { to: "/admin/admin-offices", label: "Office Management", icon: Building2 },
+      { to: "/admin/admin-departments", label: "Department Management", icon: Building },
+      { to: "/admin/admin-floor-maps", label: "Floor Maps", icon: Map },
+      { to: "/admin/admin-nodes", label: "Navigation Nodes", icon: Network },
+      { to: "/admin/admin-qr-code", label: "QR Code Management", icon: QrCode },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { to: "/admin/admin-analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/admin/admin-reports", label: "Reports", icon: FileText },
+      { to: "/admin/admin-scan-history", label: "Scan History", icon: History },
+
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { to: "/admin/admin-settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
+
+const NAV = NAV_GROUPS.flatMap((group) => group.items);
 
 export interface AdminShellProps {
   title: string;
@@ -79,25 +116,36 @@ export function AdminShell({ title, description, breadcrumbs = [], actions, chil
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-2">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.to, item.exact);
-            return (
-              <Link
-                key={item.to}
-                href={item.to}
-                className={cn(
-                  "mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  active
-                  ? "bg-yellow-400 text-gray-900 font-medium"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {open && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
+          {NAV_GROUPS.map((group, groupIndex) => (
+            <div key={group.label} className={cn(groupIndex > 0 && "mt-4")}>
+              {open ? (
+                <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  {group.label}
+                </div>
+              ) : (
+                groupIndex > 0 && <div className="mx-3 mb-2 border-t border-white/10" />
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.to, item.exact);
+                return (
+                  <Link
+                    key={item.to}
+                    href={item.to}
+                    className={cn(
+                      "mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      active
+                      ? "bg-yellow-400 text-gray-900 font-medium"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {open && <span className="truncate">{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
        

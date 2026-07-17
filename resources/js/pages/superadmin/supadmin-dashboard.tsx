@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     Users, Settings, Database, Cloud, Zap, AlertCircle,
     Shield, BarChart3, HardDrive, Plus, CheckCircle2,
@@ -13,13 +14,13 @@ import {
 } from 'recharts';
 
 const systemStats = [
-    { label: 'Total Admin Accounts', value: 12, icon: Users, color: 'text-blue-600 bg-blue-100' },
-    { label: 'System Health', value: '98%', icon: Zap, color: 'text-green-600 bg-green-100' },
-    { label: 'Active Sessions', value: 24, icon: Shield, color: 'text-purple-600 bg-purple-100' },
-    { label: 'Disk Usage', value: '67%', icon: HardDrive, color: 'text-orange-600 bg-orange-100' },
+    { label: 'Total Admin Accounts', value: 12,   icon: Users,     color: 'text-blue-600 bg-blue-100', href: '/superadmin/supadmin-admin-accounts' },
+    { label: 'System Health',        value: '98%', icon: Zap,       color: 'text-blue-600 bg-blue-100', href: '/superadmin/supadmin-performance' },
+    { label: 'Active Sessions',      value: 24,    icon: Shield,    color: 'text-blue-600 bg-blue-100', href: '/superadmin/supadmin-system-settings' },
+    { label: 'Disk Usage',           value: '67%', icon: HardDrive, color: 'text-blue-600 bg-blue-100', href: '/superadmin/supadmin-backup-recovery' },
 ];
 
-const systemHealth = [
+const dailySystemHealth = [
     { time: 'Mon', uptime: 99.8 },
     { time: 'Tue', uptime: 99.9 },
     { time: 'Wed', uptime: 99.7 },
@@ -27,6 +28,20 @@ const systemHealth = [
     { time: 'Fri', uptime: 99.8 },
     { time: 'Sat', uptime: 99.6 },
     { time: 'Sun', uptime: 99.9 },
+];
+
+const monthlySystemHealth = [
+    { time: 'Jan', uptime: 99.7 },
+    { time: 'Feb', uptime: 99.8 },
+    { time: 'Mar', uptime: 99.6 },
+    { time: 'Apr', uptime: 99.9 },
+    { time: 'May', uptime: 99.8 },
+    { time: 'Jun', uptime: 99.9 },
+];
+
+const UPTIME_PERIODS = [
+    { value: 'daily',   label: 'Daily',   data: dailySystemHealth },
+    { value: 'monthly', label: 'Monthly', data: monthlySystemHealth },
 ];
 
 const systemEvents = [
@@ -44,6 +59,58 @@ const managementItems = [
     { id: 5, name: 'Performance', status: 'Optimal', count: 7 },
 ];
 
+function SystemUptimeCard() {
+    const [period, setPeriod] = useState<'daily' | 'monthly'>('daily');
+    const active = UPTIME_PERIODS.find((p) => p.value === period)!;
+
+    return (
+        <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>System Uptime {period === 'daily' ? '— This Week' : '— This Year'}</CardTitle>
+                <div className="flex rounded-md border border-border p-0.5">
+                    {UPTIME_PERIODS.map((p) => (
+                        <button
+                            key={p.value}
+                            onClick={() => setPeriod(p.value as 'daily' | 'monthly')}
+                            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                                period === p.value
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={active.data}>
+                            <XAxis dataKey="time" stroke="#9ca3af" fontSize={12} />
+                            <YAxis stroke="#9ca3af" fontSize={12} domain={[99, 100]} />
+                            <Tooltip
+                                contentStyle={{
+                                    background: '#fff',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: 8,
+                                }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="uptime"
+                                stroke="#1a56c4"
+                                strokeWidth={2}
+                                dot={{ fill: '#1a56c4', r: 4 }}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function SuperadminDashboard() {
     return (
         <>
@@ -59,64 +126,38 @@ export default function SuperadminDashboard() {
                             </Link>
                         </Button>
                         <Button asChild>
-                            <Link href="/superadmin/users">
+                            <Link href="/superadmin/admin-accounts">
                                 <Plus className="mr-2 h-4 w-4" /> Add Admin
                             </Link>
                         </Button>
                     </>
                 }
             >
-                {/* System Stats */}
+                {/* System Stats — double as quick links */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {systemStats.map((s) => {
                         const Icon = s.icon;
                         return (
-                            <Card key={s.label}>
-                                <CardContent className="flex items-center justify-between gap-3 p-4">
-                                    <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${s.color}`}>
-                                        <Icon className="h-5 w-5" />
-                                    </div>
-                                    <div className="flex flex-1 flex-col">
-                                        <div className="text-xs text-gray-500">{s.label}</div>
-                                        <div className="mt-1 self-end text-xl font-semibold">{s.value}</div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <Link key={s.label} href={s.href}>
+                                <Card className="transition-colors hover:border-blue-300 hover:bg-blue-50/40">
+                                    <CardContent className="flex items-center justify-between gap-3 p-4">
+                                        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${s.color}`}>
+                                            <Icon className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex flex-1 flex-col">
+                                            <div className="text-xs text-gray-500">{s.label}</div>
+                                            <div className="mt-1 self-end text-xl font-semibold">{s.value}</div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         );
                     })}
                 </div>
 
                 {/* System Health Chart + Events */}
                 <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>System Uptime — This Week</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={systemHealth}>
-                                        <XAxis dataKey="time" stroke="#9ca3af" fontSize={12} />
-                                        <YAxis stroke="#9ca3af" fontSize={12} domain={[99, 100]} />
-                                        <Tooltip
-                                            contentStyle={{
-                                                background: '#fff',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: 8,
-                                            }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="uptime"
-                                            stroke="#1a56c4"
-                                            strokeWidth={2}
-                                            dot={{ fill: '#1a56c4', r: 4 }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <SystemUptimeCard />
 
                     <Card>
                         <CardHeader><CardTitle>System Events</CardTitle></CardHeader>
@@ -136,35 +177,14 @@ export default function SuperadminDashboard() {
                                     </div>
                                 </div>
                             ))}
-                            <Link href="/superadmin/notifications" className="block text-center text-xs text-blue-600 hover:underline">
+                            <Link href="/superadmin/supadmin-notifications" className="block text-center text-xs text-blue-600 hover:underline">
                                 View all events
                             </Link>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* System Management */}
-                <Card className="mt-6">
-                    <CardHeader><CardTitle>System Management</CardTitle></CardHeader>
-                    <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        {[
-                            { label: 'Admin Accounts', icon: Users, href: '/superadmin/admin-accounts' },
-                            { label: 'Settings', icon: Settings, href: '/superadmin/system-settings' },
-                            { label: 'Database', icon: Database, href: '/superadmin/database-schema' },
-                            { label: 'Performance', icon: Zap, href: '/superadmin/performance' },
-                            { label: 'Backup & Recovery', icon: Cloud, href: '/superadmin/backup-recovery' },
-                        ].map((a) => (
-                            <Button key={a.label} variant="outline" className="h-auto justify-start gap-3 py-3" asChild>
-                                <Link href={a.href}>
-                                    <a.icon className="h-5 w-5 text-blue-600" />
-                                    <span>{a.label}</span>
-                                </Link>
-                            </Button>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                {/* Management Overview */}
+                {/* Management Overview
                 <Card className="mt-6">
                     <CardHeader><CardTitle>System Components</CardTitle></CardHeader>
                     <CardContent>
@@ -184,7 +204,7 @@ export default function SuperadminDashboard() {
                             ))}
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
             </SuperadminShell>
         </>
     );

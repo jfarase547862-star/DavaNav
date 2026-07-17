@@ -22,7 +22,6 @@ import {
     buildQrImagePath,
 } from '@/lib/mock-data';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const uid = () => `q${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -37,6 +36,22 @@ function StatusBadge({ status }: { status: 'Active' | 'Inactive' }) {
         >
             {status}
         </Badge>
+    );
+}
+
+
+function StatusToggle({ checked, onChange, id }: { checked: boolean; onChange: (v: boolean) => void; id?: string }) {
+    return (
+        <button
+            id={id}
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={() => onChange(!checked)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-emerald-600' : 'bg-gray-300'}`}
+        >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+        </button>
     );
 }
 
@@ -72,6 +87,7 @@ export default function QrPage() {
     const [genOpen, setGenOpen] = useState(false);
     const [genLabel, setGenLabel] = useState('');
     const [genOffice, setGenOffice] = useState('');
+    const [genStatus, setGenStatus] = useState<'Active' | 'Inactive'>('Active');
 
     const [previewQr, setPreviewQr] = useState<QrCode | null>(null);
     const [assignTarget, setAssignTarget] = useState<QrCode | null>(null);
@@ -89,8 +105,18 @@ export default function QrPage() {
         return list;
     }, [qrs, q, statusFilter]);
 
+    function resetGenForm() {
+        setGenLabel('');
+        setGenOffice('');
+        setGenStatus('Active');
+    }
+
     // ── Mutations ─────────────────────────────────────────────────────────────
 
+    // Table 15: office_id (genOffice) + status (genStatus) are the only real inputs.
+    // qr_string / qr_image_path / generated_at (createdAt) are all system-generated here,
+    // matching the doc's "auto" / "DEFAULT CURRENT_TIMESTAMP" constraints.
+    // `label`/`code` are the non-dictionary fields noted above — code is derived from label.
     function generate() {
         if (!genLabel.trim()) { toast.error('Label is required'); return; }
         const code = `DAVANAV-${genLabel.toUpperCase().replace(/\s+/g, '-').slice(0, 14)}`;
@@ -100,7 +126,7 @@ export default function QrPage() {
             officeId,
             qrString: buildQrString(officeId),
             qrImagePath: buildQrImagePath(code),
-            status: 'Active', scans: 0,
+            status: genStatus, scans: 0,
             createdAt: new Date().toISOString().slice(0, 10),
         };
         setQrs((prev) => [newQr, ...prev]);
@@ -108,9 +134,11 @@ export default function QrPage() {
             setOffices((prev) => prev.map((o) => o.id === genOffice ? { ...o, qrAssigned: true } : o));
         }
         toast.success('QR code generated');
-        setGenOpen(false); setGenLabel(''); setGenOffice('');
+        setGenOpen(false);
+        resetGenForm();
     }
 
+    // Table 15: status toggle (Active/Inactive).
     function deactivate(qr: QrCode) {
         setQrs((prev) => prev.map((x) =>
             x.id === qr.id ? { ...x, status: x.status === 'Active' ? 'Inactive' : 'Active' } : x,
@@ -118,6 +146,7 @@ export default function QrPage() {
         toast.success(qr.status === 'Active' ? 'QR deactivated' : 'QR activated');
     }
 
+    // Table 15: re-issues qr_string / qr_image_path for the same office_id.
     function replace(qr: QrCode) {
         setQrs((prev) => prev.map((x) => {
             if (x.id !== qr.id) return x;
@@ -133,6 +162,7 @@ export default function QrPage() {
         toast.success('QR replaced with new code');
     }
 
+    // Table 15: office_id reassignment ("Assigned Office" dropdown).
     function assign() {
         if (!assignTarget) return;
         const officeId = assignTo || null;
@@ -166,6 +196,14 @@ export default function QrPage() {
     }
 
     const officeName = (id: string | null) => offices.find((o) => o.id === id)?.name ?? '—';
+
+    // Live preview of the system-generated fields, computed from the current form
+    // state so staff can see what office_id/qr_string will resolve to before submitting.
+    const previewCode = genLabel.trim()
+        ? `DAVANAV-${genLabel.toUpperCase().replace(/\s+/g, '-').slice(0, 14)}`
+        : null;
+    const previewQrString = previewCode ? buildQrString(genOffice || null) : null;
+    const previewImagePath = previewCode ? buildQrImagePath(previewCode) : null;
 
     // ── Render ────────────────────────────────────────────────────────────────
 
@@ -247,7 +285,7 @@ export default function QrPage() {
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
+                                                    <DropdownMenuContent align="end" className="bg-white">
                                                         <DropdownMenuItem onClick={() => setPreviewQr(qr)}>
                                                             <Eye className="mr-2 h-4 w-4" /> Preview
                                                         </DropdownMenuItem>
@@ -266,9 +304,6 @@ export default function QrPage() {
                                                         <DropdownMenuItem onClick={() => deactivate(qr)}>
                                                             <Power className="mr-2 h-4 w-4" /> {qr.status === 'Active' ? 'Deactivate' : 'Activate'}
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setHistoryQr(qr)}>
-                                                            <Eye className="mr-2 h-4 w-4" /> Scan History
-                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => setDelTarget(qr)} className="text-red-600">
                                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                         </DropdownMenuItem>
@@ -283,29 +318,61 @@ export default function QrPage() {
                     </Card>
                 </div>
 
-                {/* ── Generate dialog ── */}
-                <Dialog open={genOpen} onOpenChange={setGenOpen}>
-                    <DialogContent>
+                {/* ── Generate dialog — field-by-field mapped to Table 15 ── */}
+                <Dialog open={genOpen} onOpenChange={(o) => { setGenOpen(o); if (!o) resetGenForm(); }}>
+                    <DialogContent className="bg-white">
                         <DialogHeader>
                             <DialogTitle>Generate QR Code</DialogTitle>
-                            <DialogDescription>Create a new QR code and optionally assign it to an office.</DialogDescription>
+                            
                         </DialogHeader>
-                        <div className="grid gap-3">
+
+                        <div className="grid gap-4">
+                           
+
+                                <div className="space-y-1">
+                                    <Label>Assigned Office <span className="font-normal text-gray-400"></span></Label>
+                                    <Select value={genOffice} onValueChange={setGenOffice}>
+                                        <SelectTrigger><SelectValue placeholder="Select office (optional)" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value=""></SelectItem>
+                                            {offices.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                               
+                            
+
+                            {/* Non-dictionary UI addition — kept visually separate per the doc-gap note */}
                             <div className="space-y-1">
                                 <Label>Label *</Label>
                                 <Input value={genLabel} onChange={(e) => setGenLabel(e.target.value)} placeholder="e.g. South Lobby" />
                             </div>
-                            <div className="space-y-1">
-                                <Label>Assign to Office (optional)</Label>
-                                <Select value={genOffice} onValueChange={setGenOffice}>
-                                    <SelectTrigger><SelectValue placeholder="Select office" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="">— None —</SelectItem>
-                                        {offices.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                <div className="flex items-center justify-between rounded-md border p-2">
+                                    <Label htmlFor="gen-status-toggle" className="mb-0">
+                                        Status <span className="font-normal text-gray-400"></span>
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">{genStatus}</span>
+                                        <StatusToggle
+                                            id="gen-status-toggle"
+                                            checked={genStatus === 'Active'}
+                                            onChange={(v) => setGenStatus(v ? 'Active' : 'Inactive')}
+                                        />
+                                    </div>
+                                </div>
+                            {/* System-generated preview — read-only, mirrors qr_string / qr_image_path / generated_at */}
+                            {previewCode && (
+                                <div className="space-y-1 rounded-md border border-dashed p-3 text-xs text-gray-500">
+                                    <div className="font-semibold uppercase tracking-wide text-gray-400">
+                                        Auto-generated on submit
+                                    </div>
+                                    <div><span className="text-gray-400">qr_string:</span> <span className="break-all font-mono">{previewQrString}</span></div>
+                                    <div><span className="text-gray-400">qr_image_path:</span> <span className="break-all font-mono">{previewImagePath}</span></div>
+                                    <div><span className="text-gray-400">generated_at:</span> <span className="font-mono">{new Date().toISOString().slice(0, 10)} (today)</span></div>
+                                </div>
+                            )}
                         </div>
+
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setGenOpen(false)}>Cancel</Button>
                             <Button onClick={generate}>Generate</Button>
@@ -313,9 +380,9 @@ export default function QrPage() {
                     </DialogContent>
                 </Dialog>
 
-                {/* ── Preview dialog ── */}
+                {/* ── Preview dialog — displays auto-generated qr_string / qr_image_path ── */}
                 <Dialog open={!!previewQr} onOpenChange={(o) => !o && setPreviewQr(null)}>
-                    <DialogContent>
+                    <DialogContent className="bg-white">
                         <DialogHeader>
                             <DialogTitle>{previewQr?.label}</DialogTitle>
                             <DialogDescription className="font-mono">{previewQr?.code}</DialogDescription>
@@ -335,9 +402,9 @@ export default function QrPage() {
                     </DialogContent>
                 </Dialog>
 
-                {/* ── Assign dialog ── */}
+                {/* ── Assign dialog — Table 15: office_id reassignment ── */}
                 <Dialog open={!!assignTarget} onOpenChange={(o) => !o && setAssignTarget(null)}>
-                    <DialogContent>
+                    <DialogContent className="bg-white">
                         <DialogHeader>
                             <DialogTitle>Assign QR to Office</DialogTitle>
                             <DialogDescription>Link "{assignTarget?.label}" to an office.</DialogDescription>
@@ -356,9 +423,9 @@ export default function QrPage() {
                     </DialogContent>
                 </Dialog>
 
-                {/* ── Scan history dialog ── */}
+                {/* ── Scan history dialog — Table 19 (Scan Logs), system-generated, read-only ── */}
                 <Dialog open={!!historyQr} onOpenChange={(o) => !o && setHistoryQr(null)}>
-                    <DialogContent>
+                    <DialogContent className="bg-white">
                         <DialogHeader>
                             <DialogTitle>Scan History — {historyQr?.label}</DialogTitle>
                             <DialogDescription>Recent scans of this QR code.</DialogDescription>

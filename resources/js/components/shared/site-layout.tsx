@@ -7,8 +7,8 @@ const BLUE = '#1a4fa0';
 
 const navLinks = [
   { label: 'Home',      href: '/kiosk' },
-  { label: 'Directory', href: '/kiosk/directory' },
-  { label: 'Map',       href: '/kiosk/map' },
+  { label: 'Directory', href: '/kiosk/kiosk-directory' },
+  { label: 'Map',       href: '/kiosk/kiosk-map' },
 ];
 
 export function SiteHeader() {
@@ -135,8 +135,8 @@ export function SiteFooter() {
             <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Product</h4>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li><Link href="/kiosk" className="hover:text-slate-900">Home</Link></li>
-              <li><Link href="/kiosk/directory" className="hover:text-slate-900">Office Directory</Link></li>
-              <li><Link href="/kiosk/map" className="hover:text-slate-900">Interactive Map</Link></li>
+              <li><Link href="/kiosk/kiosk-directory" className="hover:text-slate-900">Office Directory</Link></li>
+              <li><Link href="/kiosk/kiosk-map" className="hover:text-slate-900">Interactive Map</Link></li>
             </ul>
           </div>
 

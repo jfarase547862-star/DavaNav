@@ -1,8 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import {
-    Building2, Building, QrCode, Users as UsersIcon, TrendingUp,
-    Activity as ActivityIcon, Clock, MapPin, Plus, BarChart3,
-    Map, ShieldCheck,
+    Building, QrCode, TrendingUp,
+    Activity as ActivityIcon, MapPin, Plus, BarChart3,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +13,22 @@ import {
 } from 'recharts';
 
 const stats = [
-    { label: 'Total Departments', value: 8, icon: Building, color: 'text-yellow-600 bg-yellow-100' },
-    { label: 'Monthly Visitors', value: '5,810', icon: TrendingUp, color: 'text-yellow-600 bg-yellow-100' },
-    { label: 'Active Navigation Requests', value: 17, icon: ActivityIcon, color: 'text-green-600 bg-green-100' },
-    { label: 'Most Visited Office', value: "Treasurer's", icon: MapPin, color: 'text-blue-600 bg-blue-100' },
+    {
+        label: 'Total Departments', value: 8, icon: Building,
+        color: 'text-blue-600 bg-blue-100', href: '/admin/admin-departments',
+    },
+    {
+        label: 'Monthly Visitors', value: '5,810', icon: TrendingUp,
+        color: 'text-blue-600 bg-blue-100', href: '/admin/admin-analytics',
+    },
+    {
+        label: 'Active Navigation Requests', value: 17, icon: ActivityIcon,
+        color: 'text-blue-600 bg-blue-100', href: '/admin/admin-navigation-nodes',
+    },
+    {
+        label: 'Most Visited Office', value: "Treasurer's", icon: MapPin,
+        color: 'text-blue-600 bg-blue-100', href: '/admin/admin-offices',
+    },
 ];
 
 const dailyVisitors = [
@@ -55,34 +66,36 @@ export default function Dashboard() {
                 actions={
                     <>
                         <Button variant="outline" asChild>
-                            <Link href="/admin/analytics">
+                            <Link href="/admin/admin-analytics">
                                 <BarChart3 className="mr-2 h-4 w-4" /> View Analytics
                             </Link>
                         </Button>
                         <Button asChild>
-                            <Link href="/admin/offices">
+                            <Link href="/admin/admin-offices">
                                 <Plus className="mr-2 h-4 w-4" /> Add Office
                             </Link>
                         </Button>
                     </>
                 }
             >
-                {/* Stat cards */}
+                {/* Stat cards — now double as quick links */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {stats.map((s) => {
                         const Icon = s.icon;
                         return (
-                            <Card key={s.label}>
-                                <CardContent className="flex items-center justify-between gap-3 p-4">
-                                    <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${s.color}`}>
-                                        <Icon className="h-5 w-5" />
-                                    </div>
-                                    <div className="flex flex-1 flex-col">
-                                        <div className="text-xs text-gray-500">{s.label}</div>
-                                        <div className="mt-1 self-end text-xl font-semibold">{s.value}</div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <Link key={s.label} href={s.href}>
+                                <Card className="transition-colors hover:border-blue-300 hover:bg-blue-50/40">
+                                    <CardContent className="flex items-center justify-between gap-3 p-4">
+                                        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${s.color}`}>
+                                            <Icon className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex flex-1 flex-col">
+                                            <div className="text-xs text-gray-500">{s.label}</div>
+                                            <div className="mt-1 self-end text-xl font-semibold">{s.value}</div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         );
                     })}
                 </div>
@@ -141,35 +154,14 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             ))}
-                            <Link href="/admin/notifications" className="block text-center text-xs text-blue-600 hover:underline">
+                            <Link href="/admin/admin-notifications" className="block text-center text-xs text-blue-600 hover:underline">
                                 View all activity
                             </Link>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Quick Actions */}
-                <Card className="mt-6">
-                    <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
-                    <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        {[
-                            { label: 'Add Office', icon: Building2, href: '/admin/offices' },
-                            { label: 'Generate QR', icon: QrCode, href: '/admin/qr-code' },
-                            { label: 'Upload Floor Map', icon: Map, href: '/admin/floor-maps' },
-                            { label: 'View Analytics', icon: BarChart3, href: '/admin/analytics' },
-                            { label: 'Manage Users', icon: ShieldCheck, href: '/admin/users' },
-                        ].map((a) => (
-                            <Button key={a.label} variant="outline" className="h-auto justify-start gap-3 py-3" asChild>
-                                <Link href={a.href}>
-                                    <a.icon className="h-5 w-5 text-blue-600" />
-                                    <span>{a.label}</span>
-                                </Link>
-                            </Button>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                {/* Top Offices */}
+                {/* Top Offices
                 <Card className="mt-6">
                     <CardHeader><CardTitle>Top Offices by Visit</CardTitle></CardHeader>
                     <CardContent>
@@ -190,7 +182,7 @@ export default function Dashboard() {
                             ))}
                         </div>
                     </CardContent>
-                </Card>
+                </Card> */}
             </AdminShell>
         </>
     );

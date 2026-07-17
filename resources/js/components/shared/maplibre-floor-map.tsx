@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MLMap, GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import IndoorEqual from 'maplibre-gl-indoorequal';
+import 'maplibre-gl-indoorequal/maplibre-gl-indoorequal.css';
 import { Boxes, Square } from 'lucide-react';
+
+const INDOOREQUAL_API_KEY = import.meta.env.VITE_INDOOREQUAL_API_KEY ?? '';
+const INDOOREQUAL_SPRITE_URL =
+  'https://unpkg.com/maplibre-gl-indoorequal@1.3.0/sprite/indoorequal';
+const BUILDING_FLOORS = [1, 2, 3];
 
 // ── Fixed starting point: Davao City Hall ───────────────────────────────────
 // San Pedro Street, Poblacion District, Davao City, Philippines
@@ -9,8 +16,8 @@ export const CITY_HALL_NAME = 'Davao City Hall';
 export const CITY_HALL_COORDS: [number, number] = [125.6128, 7.0644]; // [lon, lat]
 
 const BUILDING_COORDS = CITY_HALL_COORDS;
-const BUILDING_ZOOM = 17.5;
-const INDOOR_ZOOM_THRESHOLD = 18.2; // switch to indoor overlay past this zoom
+const BUILDING_ZOOM = 18.5;
+const INDOOR_ZOOM_THRESHOLD = 17.5; // switch to indoor overlay past this zoom
 
 // 3D settings
 const FLOOR_HEIGHT_M = 3.5; // approximate ceiling height per floor, in meters
@@ -127,17 +134,116 @@ function buildIndoorGeoJSON3D(currentFloor: number, highlightId?: string) {
   };
 }
 
+// IndoorEqual geojson schema — works without an API key for custom building data.
+function buildIndoorEqualGeoJSON() {
+  const shellOffsets: [number, number][] = [
+    [-5, -2],
+    [6, -2],
+    [6, 3],
+    [-5, 3],
+    [-5, -2],
+  ];
+
+  const shellFeatures = BUILDING_FLOORS.map((level) => ({
+    type: 'Feature' as const,
+    properties: {
+      class: 'area',
+      level: String(level),
+    },
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [offsetsToLngLat(shellOffsets)],
+    },
+  }));
+
+  const roomFeatures = indoorRooms.map((r) => ({
+    type: 'Feature' as const,
+    properties: {
+      class: 'room',
+      level: String(r.floor),
+      is_poi: true,
+      subclass: 'office',
+      id: r.id,
+      name: r.name,
+      room: r.room,
+    },
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [offsetsToLngLat(r.offsets)],
+    },
+  }));
+
+  const labelFeatures = indoorRooms.map((r) => ({
+    type: 'Feature' as const,
+    properties: {
+      level: String(r.floor),
+      'name:latin': r.room,
+      ref: r.room,
+      name: r.name,
+    },
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [offsetsToLngLat(r.offsets)],
+    },
+  }));
+
+  return {
+    area: {
+      type: 'FeatureCollection' as const,
+      features: [...shellFeatures, ...roomFeatures],
+    },
+    area_name: {
+      type: 'FeatureCollection' as const,
+      features: labelFeatures,
+    },
+  };
+}
+
+function buildHighlightGeoJSON(floor: number, highlightId?: string) {
+  const room = indoorRooms.find((r) => r.floor === floor && r.id === highlightId);
+  if (!room) {
+    return { type: 'FeatureCollection' as const, features: [] };
+  }
+  return {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: { id: room.id },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [offsetsToLngLat(room.offsets)],
+        },
+      },
+    ],
+  };
+}
+
+function resolveHighlightRoomId(highlightId?: string) {
+  if (!highlightId) return undefined;
+  if (indoorRooms.some((r) => r.id === highlightId)) return highlightId;
+  const normalized = highlightId.replace(/-/g, ' ').toLowerCase();
+  return indoorRooms.find((r) => {
+    const name = r.name.toLowerCase();
+    return name === normalized || name.includes(normalized) || normalized.includes(name);
+  })?.id;
+}
+
 interface Props {
   floor: number;
   highlightId?: string;
   onSelect?: (id: string) => void;
+  onFloorChange?: (floor: number) => void;
 }
 
-export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
+export function MapLibreFloorMap({ floor, highlightId, onSelect, onFloorChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
+  const indoorEqualRef = useRef<IndoorEqual | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onFloorChangeRef = useRef(onFloorChange);
   onSelectRef.current = onSelect;
+  onFloorChangeRef.current = onFloorChange;
   const [error, setError] = useState<string | null>(null);
   const [is3D, setIs3D] = useState(false);
   const is3DRef = useRef(is3D);
@@ -154,9 +260,31 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
 
     let map: MLMap;
     try {
+      const style = {
+        version: 8,
+        sources: {
+          cartodb: {
+            type: 'raster',
+            tiles: ['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors, © CartoDB',
+          },
+        },
+        layers: [
+          {
+            id: 'cartodb-base',
+            type: 'raster',
+            source: 'cartodb',
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+      } as any;
+
       map = new maplibregl.Map({
         container: containerRef.current,
-        style: BASEMAP_STYLE,
+        style,
         center: BUILDING_COORDS,
         zoom: BUILDING_ZOOM,
         pitch: 0,
@@ -176,6 +304,25 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
 
     map.on('load', () => {
+      // Initialize IndoorEqual only after map style is loaded
+      const useLocalIndoorData = !INDOOREQUAL_API_KEY;
+      const indoorEqual = new IndoorEqual(
+        map,
+        useLocalIndoorData
+          ? { geojson: buildIndoorEqualGeoJSON(), heatmap: false }
+          : { apiKey: INDOOREQUAL_API_KEY, heatmap: false },
+      );
+      indoorEqual.loadSprite(INDOOREQUAL_SPRITE_URL).catch((err) => {
+        console.warn('IndoorEqual sprite failed to load:', err);
+      });
+      indoorEqual.setLevel(String(floor));
+      indoorEqual.on('levelchange', (level) => {
+        const nextFloor = Number(level as string);
+        if (!Number.isNaN(nextFloor)) onFloorChangeRef.current?.(nextFloor);
+      });
+      map.addControl(indoorEqual, 'bottom-right');
+      indoorEqualRef.current = indoorEqual;
+
       // Building marker (outdoor view) — fixed starting point
       new maplibregl.Marker({ color: '#1a4fa0' })
         .setLngLat(BUILDING_COORDS)
@@ -183,49 +330,76 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
         .addTo(map);
 
       // ── 2D source + layers (flat, current floor only) ──────────────────
-      map.addSource('indoor-rooms', {
-        type: 'geojson',
-        data: buildIndoorGeoJSON(floor, highlightId) as any,
-      });
+      if (!useLocalIndoorData) {
+        map.addSource('indoor-rooms', {
+          type: 'geojson',
+          data: buildIndoorGeoJSON(floor, resolveHighlightRoomId(highlightId)) as any,
+        });
 
-      map.addLayer({
-        id: 'indoor-fill',
-        type: 'fill',
-        source: 'indoor-rooms',
-        paint: {
-          'fill-color': ['case', ['get', 'highlight'], '#1a4fa0', '#ffffff'],
-          'fill-opacity': ['case', ['get', 'highlight'], 0.85, 0.9],
-        },
-      });
+        map.addLayer({
+          id: 'indoor-fill',
+          type: 'fill',
+          source: 'indoor-rooms',
+          paint: {
+            'fill-color': ['case', ['get', 'highlight'], '#1a4fa0', '#ffffff'],
+            'fill-opacity': ['case', ['get', 'highlight'], 0.85, 0.9],
+          },
+        });
 
-      map.addLayer({
-        id: 'indoor-outline',
-        type: 'line',
-        source: 'indoor-rooms',
-        paint: {
-          'line-color': ['case', ['get', 'highlight'], '#1a4fa0', '#94a3b8'],
-          'line-width': 1.5,
-        },
-      });
+        map.addLayer({
+          id: 'indoor-outline',
+          type: 'line',
+          source: 'indoor-rooms',
+          paint: {
+            'line-color': ['case', ['get', 'highlight'], '#1a4fa0', '#94a3b8'],
+            'line-width': 1.5,
+          },
+        });
 
-      map.addLayer({
-        id: 'indoor-label',
-        type: 'symbol',
-        source: 'indoor-rooms',
-        layout: {
-          'text-field': ['get', 'room'],
-          'text-size': 11,
-          'text-font': ['Noto Sans Bold'],
-        },
-        paint: {
-          'text-color': ['case', ['get', 'highlight'], '#ffffff', '#1e3a5f'],
-        },
-      });
+        map.addLayer({
+          id: 'indoor-label',
+          type: 'symbol',
+          source: 'indoor-rooms',
+          layout: {
+            'text-field': ['get', 'room'],
+            'text-size': 11,
+            'text-font': ['Noto Sans Bold'],
+          },
+          paint: {
+            'text-color': ['case', ['get', 'highlight'], '#ffffff', '#1e3a5f'],
+          },
+        });
+      } else {
+        map.addSource('indoor-highlight', {
+          type: 'geojson',
+          data: buildHighlightGeoJSON(floor, resolveHighlightRoomId(highlightId)) as any,
+        });
+        map.addLayer({
+          id: 'indoor-highlight-fill',
+          type: 'fill',
+          source: 'indoor-highlight',
+          paint: {
+            'fill-color': '#1a4fa0',
+            'fill-opacity': 0.45,
+          },
+          layout: { visibility: 'none' },
+        });
+        map.addLayer({
+          id: 'indoor-highlight-outline',
+          type: 'line',
+          source: 'indoor-highlight',
+          paint: {
+            'line-color': '#1a4fa0',
+            'line-width': 2.5,
+          },
+          layout: { visibility: 'none' },
+        });
+      }
 
       // ── 3D source + layer (all floors, extruded and stacked) ───────────
       map.addSource('indoor-rooms-3d', {
         type: 'geojson',
-        data: buildIndoorGeoJSON3D(floor, highlightId) as any,
+        data: buildIndoorGeoJSON3D(floor, resolveHighlightRoomId(highlightId)) as any,
       });
 
       map.addLayer({
@@ -241,10 +415,17 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
             ['get', 'isCurrentFloor'], '#ffffff',
             '#c7d2e0',
           ],
-          'fill-extrusion-opacity': ['case', ['get', 'isCurrentFloor'], 0.95, 0.35],
+          'fill-extrusion-opacity': 0.85,
         },
         layout: { visibility: 'none' },
       });
+
+      const indoorEqualLayerIds = [
+        'indoor-polygon',
+        'indoor-area',
+        'indoor-lines',
+        'indoor-name',
+      ];
 
       // Toggle indoor layers by zoom level AND 2D/3D mode
       const applyVisibility = () => {
@@ -253,6 +434,12 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
         const show2D = zoomedIn && !is3DRef.current;
         const show3D = zoomedIn && is3DRef.current;
         ['indoor-fill', 'indoor-outline', 'indoor-label'].forEach((id) => {
+          if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', show2D ? 'visible' : 'none');
+        });
+        ['indoor-highlight-fill', 'indoor-highlight-outline'].forEach((id) => {
+          if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', show2D ? 'visible' : 'none');
+        });
+        indoorEqualLayerIds.forEach((id) => {
           if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', show2D ? 'visible' : 'none');
         });
         if (map.getLayer('indoor-extrusion')) {
@@ -269,29 +456,45 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
         if (id) onSelectRef.current?.(id);
       };
       map.on('click', 'indoor-fill', handleClick);
+      map.on('click', 'indoor-polygon', handleClick);
       map.on('click', 'indoor-extrusion', handleClick);
-      ['indoor-fill', 'indoor-extrusion'].forEach((id) => {
+      ['indoor-fill', 'indoor-polygon', 'indoor-extrusion'].forEach((id) => {
         map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; });
       });
     });
 
     return () => {
+      if (indoorEqualRef.current) {
+        map.removeControl(indoorEqualRef.current);
+        indoorEqualRef.current.remove();
+        indoorEqualRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep IndoorEqual floor widget in sync with the floor prop
+  useEffect(() => {
+    const indoorEqual = indoorEqualRef.current;
+    if (!indoorEqual || indoorEqual.level === String(floor)) return;
+    indoorEqual.setLevel(String(floor));
+  }, [floor]);
+
   // Update indoor data when floor/highlight changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    const resolvedHighlightId = resolveHighlightRoomId(highlightId);
     const apply = () => {
       const src2d = map.getSource('indoor-rooms') as GeoJSONSource | undefined;
-      if (src2d) src2d.setData(buildIndoorGeoJSON(floor, highlightId) as any);
+      if (src2d) src2d.setData(buildIndoorGeoJSON(floor, resolvedHighlightId) as any);
+      const srcHighlight = map.getSource('indoor-highlight') as GeoJSONSource | undefined;
+      if (srcHighlight) srcHighlight.setData(buildHighlightGeoJSON(floor, resolvedHighlightId) as any);
       const src3d = map.getSource('indoor-rooms-3d') as GeoJSONSource | undefined;
-      if (src3d) src3d.setData(buildIndoorGeoJSON3D(floor, highlightId) as any);
+      if (src3d) src3d.setData(buildIndoorGeoJSON3D(floor, resolvedHighlightId) as any);
     };
     if (map.isStyleLoaded()) apply();
     else map.once('load', apply);
@@ -347,6 +550,27 @@ export function MapLibreFloorMap({ floor, highlightId, onSelect }: Props) {
         {is3D ? <Boxes className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
         {is3D ? '3D View' : '2D View'}
       </button>
+
+      {/* Floor picker — visible when parent handles floor changes */}
+      {onFloorChange && (
+        <div className="absolute bottom-14 right-3 z-10 flex flex-col overflow-hidden rounded-lg bg-white shadow">
+          {BUILDING_FLOORS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => onFloorChange(f)}
+              className="px-3 py-1.5 text-xs font-semibold hover:bg-slate-50"
+              style={
+                floor === f
+                  ? { background: '#1a4fa0', color: '#fff' }
+                  : { color: '#374151' }
+              }
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Recenter to City Hall */}
       <button

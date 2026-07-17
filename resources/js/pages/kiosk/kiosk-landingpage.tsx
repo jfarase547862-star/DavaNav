@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
-import { SiteHeader } from '@/components/site-layout';
+import { useEffect, useState } from 'react';
+import { SiteHeader } from '@/components/shared/site-layout';
 import { Button } from '@/components/ui/button';
 import {
   MapPin,
@@ -8,19 +8,87 @@ import {
   Building2,
   Eye,
   Type,
-  Accessibility,
   Volume2,
 } from 'lucide-react';
 
 const BLUE = '#1a4fa0';
+type TextSize = 'normal' | 'large';
+type Language = 'ENG' | 'CEB' | 'FIL';
+
+const contentByLanguage: Record<Language, {
+  heading: string;
+  subheading: string;
+  viewMap: string;
+  directory: string;
+  chip1: string;
+  chip2: string;
+  chip3: string;
+  footer: string;
+}> = {
+  ENG: {
+    heading: 'Need help finding an office?',
+    subheading: 'Tap one button.',
+    viewMap: 'View Map',
+    directory: 'Directory',
+    chip1: 'High-contrast display',
+    chip2: 'Large touch targets',
+    chip3: 'Auto-return ready',
+    footer: 'Touch to begin anytime',
+  },
+  CEB: {
+    heading: 'Nangita ka ba og opisina?',
+    subheading: 'Pindota ang usa ka buton.',
+    viewMap: 'Tan-awa ang Mapa',
+    directory: 'Direktoryo',
+    chip1: 'Gipasimple nga display',
+    chip2: 'Dako nga touch targets',
+    chip3: 'Andam sa pagbalik',
+    footer: 'Pindota aron magsugod any time',
+  },
+  FIL: {
+    heading: 'Kailangan mo bang hanapin ang isang opisina?',
+    subheading: 'I-tap ang isang button.',
+    viewMap: 'Tingnan ang Mapa',
+    directory: 'Direktorya',
+    chip1: 'High-contrast na display',
+    chip2: 'Malaking touch targets',
+    chip3: 'Handa sa auto-return',
+    footer: 'I-tap upang simulan anumang oras',
+  },
+};
 
 export default function LandingPage() {
-  const [textSize, setTextSize] = useState<'normal' | 'large'>('normal');
-  const [language, setLanguage] = useState<'ENG' | 'CEB' | 'FIL'>('ENG');
-  const [accessibleRoute, setAccessibleRoute] = useState(false);
+  const [textSize, setTextSize] = useState<TextSize>('normal');
+  const [language, setLanguage] = useState<Language>('ENG');
   const [voiceGuide, setVoiceGuide] = useState(false);
 
   const big = textSize === 'large';
+  const copy = contentByLanguage[language];
+
+  const speak = (message: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !voiceGuide) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(message);
+    if (language === 'CEB') {
+      utterance.lang = 'ceb-PH';
+    } else if (language === 'FIL') {
+      utterance.lang = 'fil-PH';
+    } else {
+      utterance.lang = 'en-US';
+    }
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    if (!voiceGuide) {
+      return;
+    }
+
+    speak(`${copy.heading}. ${copy.subheading}`);
+  }, [copy.heading, copy.subheading, voiceGuide]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -59,7 +127,13 @@ export default function LandingPage() {
 
               <button
                 type="button"
-                onClick={() => setTextSize(big ? 'normal' : 'large')}
+                onClick={() => {
+                  const next = big ? 'normal' : 'large';
+                  setTextSize(next);
+                  if (voiceGuide) {
+                    speak(`Text size ${next}`);
+                  }
+                }}
                 className="flex h-8 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
               >
                 <Type className="h-3.5 w-3.5" style={{ color: BLUE }} />
@@ -69,7 +143,13 @@ export default function LandingPage() {
 
               <button
                 type="button"
-                onClick={() => setVoiceGuide((value) => !value)}
+                onClick={() => {
+                  const next = !voiceGuide;
+                  setVoiceGuide(next);
+                  if (next) {
+                    speak(`${copy.heading}. Voice guide on.`);
+                  }
+                }}
                 className="flex h-8 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
               >
                 <Volume2 className="h-3.5 w-3.5" style={{ color: BLUE }} />
@@ -105,9 +185,9 @@ export default function LandingPage() {
                   big ? 'text-6xl lg:text-7xl' : 'text-5xl lg:text-6xl'
                 }`}
               >
-                Need help finding an office?
+                {copy.heading}
                 <div className="mt-3 block" style={{ color: BLUE }}>
-                  Tap one button.
+                  {copy.subheading}
                 </div>
               </h1>
 
@@ -122,9 +202,9 @@ export default function LandingPage() {
                   style={{ backgroundColor: BLUE, color: '#fff' }}
                   className="h-20 rounded-2xl text-xl font-semibold shadow-md hover:opacity-90 sm:text-2xl"
                 >
-                  <Link href="/kiosk/map" className="inline-flex items-center justify-center gap-3">
+                  <Link href="/kiosk/kiosk-map" className="inline-flex items-center justify-center gap-3">
                     <MapPin className="h-7 w-7" />
-                    View Map
+                    {copy.viewMap}
                   </Link>
                 </Button>
                 <Button
@@ -132,17 +212,17 @@ export default function LandingPage() {
                   variant="outline"
                   className="h-20 rounded-2xl border-2 border-slate-200 bg-white text-xl font-semibold text-slate-800 shadow-md hover:bg-slate-50 sm:text-2xl"
                 >
-                  <Link href="/directory" className="inline-flex items-center justify-center gap-3">
+                  <Link href="/kiosk/kiosk-directory" className="inline-flex items-center justify-center gap-3">
                     <Building2 className="h-7 w-7" style={{ color: BLUE }} />
-                    Directory
+                    {copy.directory}
                   </Link>
                 </Button>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-500">
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">High-contrast display</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">Large touch targets</span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">Auto-return ready</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">{copy.chip1}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">{copy.chip2}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">{copy.chip3}</span>
               </div>
             </div>
           </div>
@@ -154,7 +234,7 @@ export default function LandingPage() {
               <div className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
               Main Entrance Lobby Kiosk #1 · Online
             </div>
-            <span className="italic text-slate-400">Touch to begin anytime</span>
+            <span className="italic text-slate-400">{copy.footer}</span>
           </div>
         </section>
       </main>

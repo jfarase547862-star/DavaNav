@@ -20,26 +20,24 @@ export default function Performance() {
 			<SuperadminShell
 				title="Performance"
 				description="Review key performance metrics and recent system load trends."
-				actions={
-					<Button variant="outline" asChild>
-						<Link href="/superadmin/analytics">
-							<BarChart3 className="mr-2 h-4 w-4" /> Open Metrics
-						</Link>
-					</Button>
-				}
+				
 			>
 				<div className="grid gap-4 lg:grid-cols-4">
 					{metrics.map((metric) => (
 						<Card key={metric.label}>
-							<CardContent className="space-y-2">
-								<div className="flex items-center gap-3 text-gray-700">
-									<Activity className="h-5 w-5 text-blue-600" />
-									<div>
-										<div className="text-xs uppercase text-gray-500">{metric.label}</div>
-										<div className="text-lg font-semibold">{metric.value}</div>
+							<CardContent className="p-5">
+								<div className="flex items-center gap-3">
+									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+										<Activity className="h-5 w-5 text-blue-600" />
 									</div>
+									<div className="text-sm text-gray-500">{metric.label}</div>
 								</div>
-								<div className="text-sm text-gray-500">Trend: {metric.trend}</div>
+								<div className="mt-3 text-right text-2xl font-semibold text-gray-900">
+									{metric.value}
+								</div>
+								<div className="mt-2 text-right text-sm text-gray-500">
+									Trend: {metric.trend}
+								</div>
 							</CardContent>
 						</Card>
 					))}

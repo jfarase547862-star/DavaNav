@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useRef, useState } from 'react';
-import { SiteHeader, SiteFooter } from '@/components/site-layout';
+import { SiteHeader, SiteFooter } from '@/components/shared/site-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { QrCodeSvg } from '@/components/ui/qr-code-svg';
@@ -14,11 +14,13 @@ import {
   Navigation,
   QrCode,
   Map as MapIcon,
-  Volume2,
 } from 'lucide-react';
+import type { OfficeService } from '@/types/service';
+import { OfficeServicesPanel } from '@/components/shared/office-services-panel';
 
 interface Office {
   id: string;
+  office_id?: number;
   name: string;
   description: string;
   floor: number;
@@ -27,11 +29,11 @@ interface Office {
   contact: string;
   email: string;
   head: string;
-  services: string[];
+  services: OfficeService[];
 }
 
 interface Props {
-  office: Office;
+  office: Office | null;
 }
 
 const BLUE = '#1a4fa0';
@@ -44,6 +46,33 @@ const directionSteps = [
 ];
 
 export default function OfficePage({ office: o }: Props) {
+  // Guard: if the office prop is missing/null (bad id, failed lookup on the
+  // backend, etc.) render a friendly "not found" state instead of crashing
+  // on `o.floor`.
+  if (!o) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Head title="Office not found — DavaNav" />
+        <SiteHeader />
+        <main className="flex-1">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-4 py-24 text-center sm:px-6">
+            <h1 className="font-display text-2xl font-bold">Office not found</h1>
+            <p className="text-muted-foreground">
+              We couldn't find the office you're looking for. It may have moved or the link may be incorrect.
+            </p>
+            <Link
+              href="/kiosk/kiosk-directory"
+              className="inline-flex items-center gap-1 text-sm text-primary underline"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Directory
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
   const [activeFloor, setActiveFloor] = useState(o.floor);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -58,10 +87,10 @@ export default function OfficePage({ office: o }: Props) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <Link
-            href="/directory"
+            href="/kiosk/kiosk-directory"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" /> All offices
+            <ArrowLeft className="h-4 w-4" /> Back to Directory
           </Link>
 
           <div className="mt-4 grid gap-6 lg:grid-cols-3">
@@ -79,9 +108,7 @@ export default function OfficePage({ office: o }: Props) {
                     <h1 className="mt-3 font-display text-2xl font-bold sm:text-3xl">{o.name}</h1>
                     <p className="mt-2 text-muted-foreground">{o.description}</p>
                   </div>
-                  <Button size="lg" onClick={scrollToNav}>
-                    <Navigation className="mr-2 h-4 w-4" /> Get Navigation Map
-                  </Button>
+                 
                 </div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <Info icon={Clock} label="Hours" value={o.hours} />
@@ -98,7 +125,6 @@ export default function OfficePage({ office: o }: Props) {
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       <MapIcon className="h-3.5 w-3.5" />
-                      Active Floor:
                     </span>
                     {[1, 2, 3].map((f) => (
                       <button
@@ -119,17 +145,7 @@ export default function OfficePage({ office: o }: Props) {
                   {/* Blueprint floor map */}
                   <BlueprintMap floor={activeFloor} goalRoom={o.room} goalName={o.name} goalFloor={o.floor} />
 
-                  {/* Legend */}
-                  <div className="mt-4 flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#22c55e' }} />
-                      You are here
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: BLUE }} />
-                      Destination
-                    </span>
-                  </div>
+                 
                 </div>
 
 
@@ -147,7 +163,7 @@ export default function OfficePage({ office: o }: Props) {
                   <QrCodeSvg value={`davanav://office/${o.id}`} size={180} />
                 </div>
                 <div className="mt-3 text-xs text-muted-foreground">
-                  Print and post at the entrance to this office.
+                  Scan this QR code to open the office details on your mobile device.
                 </div>
               </div>
 
@@ -165,29 +181,6 @@ export default function OfficePage({ office: o }: Props) {
                 </dl>
               </div>
 
-              {/* Step-by-step directions */}
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h3 className="flex items-center gap-1.5 text-sm font-bold" style={{ color: BLUE }}>
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: BLUE }} />
-                    DIRECTIONS
-                  </h3>
-                  <button className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    <Volume2 className="h-3.5 w-3.5" />
-                    Read Aloud
-                  </button>
-                </div>
-                <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  {directionSteps.map((s, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="font-semibold shrink-0" style={{ color: BLUE }}>
-                        {i + 1}.
-                      </span>
-                      {s}
-                    </li>
-                  ))}
-                </ol>
-              </div>
 
               {/* Services offered */}
               <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
@@ -195,19 +188,9 @@ export default function OfficePage({ office: o }: Props) {
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: BLUE }} />
                   SERVICES OFFERED
                 </h3>
-                <ul className="mt-3 space-y-2">
-                  {o.services.map((s) => (
-                    <li
-                      key={s}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm"
-                    >
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
-                        ✓
-                      </span>
-                      {s}
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3">
+                  <OfficeServicesPanel services={o.services} />
+                </div>
               </div>
             </aside>
           </div>

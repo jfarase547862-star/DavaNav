@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TrendingUp, QrCode, MapPin, Clock } from 'lucide-react';
 import {
     Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
     ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -33,6 +34,11 @@ const monthlyVisitors = [
     { month: 'Jan', visitors: 4200 }, { month: 'Feb', visitors: 3980 },
     { month: 'Mar', visitors: 5120 }, { month: 'Apr', visitors: 4760 },
     { month: 'May', visitors: 5340 }, { month: 'Jun', visitors: 5810 },
+];
+
+const VISITOR_PERIODS = [
+    { value: 'daily',   label: 'Daily',   data: dailyVisitors,   x: 'day',   type: 'bar'  as const },
+    { value: 'monthly', label: 'Monthly', data: monthlyVisitors, x: 'month', type: 'bar' as const },
 ];
 
 const popularDepartments = [
@@ -69,10 +75,10 @@ const navReqs = [
 ];
 
 const STAT_CARDS = [
-    { label: 'Visitors Today', value: '248'        },
-    { label: 'QR Scans',       value: '615'        },
-    { label: 'Most Visited',   value: "Treasurer's" },
-    { label: 'Avg. Nav Time',  value: '2m 35s'     },
+    { label: 'Visitors Today', value: '248',         icon: TrendingUp, color: 'text-blue-600 bg-blue-100' },
+    { label: 'QR Scans',       value: '615',         icon: QrCode,     color: 'text-blue-600 bg-blue-100' },
+    { label: 'Most Visited',   value: "Treasurer's", icon: MapPin,     color: 'text-blue-600 bg-blue-100' },
+    { label: 'Avg. Nav Time',  value: '2m 35s',      icon: Clock,      color: 'text-blue-600 bg-blue-100' },
 ];
 
 const COLORS = [
@@ -80,9 +86,8 @@ const COLORS = [
     'var(--chart-4)', 'var(--chart-5)', 'oklch(0.55 0.05 250)',
 ];
 
+// Charts other than Visitors, which now gets its own dedicated card with a period filter.
 const CHARTS: ChartDef[] = [
-    { title: 'Daily Visitors',        data: dailyVisitors,       key: 'visitors', x: 'day',     type: 'bar'  },
-    { title: 'Monthly Visitors',      data: monthlyVisitors,     key: 'visitors', x: 'month',   type: 'line' },
     { title: 'Popular Departments',   data: popularDepartments,  key: 'value',    x: 'name',    type: 'pie'  },
     { title: 'Most Visited Offices',  data: topOffices,          key: 'visits',   x: 'name',    type: 'bar'  },
     { title: 'Navigation Requests',   data: navReqs,             key: 'requests', x: 'week',    type: 'line' },
@@ -91,20 +96,18 @@ const CHARTS: ChartDef[] = [
 ];
 
 const tooltipStyle = {
-    background: 'var(--card)',
+    background: '#ffffff',
     border: '1px solid var(--border)',
     borderRadius: 8,
+    padding: '8px 12px',
+    color: '#1f2937',
+    fontSize: 12,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
 };
 
 // ── Shared chart renderer ─────────────────────────────────────────────────────
 
 function renderChart(c: ChartDef) {
-    const tooltipStyle = {
-        background: 'var(--color-card)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 8,
-    };
-
     if (c.type === 'bar') {
         return (
             <BarChart data={c.data}>
@@ -160,6 +163,54 @@ function ChartCard({ chart, onOpen }: { chart: ChartDef; onOpen: () => void }) {
     );
 }
 
+// ── Visitors card with period filter ──────────────────────────────────────────
+
+function VisitorsChartCard({ onOpen }: { onOpen: (chart: ChartDef) => void }) {
+    const [period, setPeriod] = useState<'daily' | 'monthly'>('daily');
+    const active = VISITOR_PERIODS.find((p) => p.value === period)!;
+
+    const chart: ChartDef = {
+        title: `${active.label} Visitors`,
+        data: active.data,
+        key: 'visitors',
+        x: active.x,
+        type: active.type,
+    };
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Visitors</CardTitle>
+                <div className="flex items-center gap-1">
+                    <div className="flex rounded-md border border-border p-0.5">
+                        {VISITOR_PERIODS.map((p) => (
+                            <button
+                                key={p.value}
+                                onClick={() => setPeriod(p.value as 'daily' | 'monthly')}
+                                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                                    period === p.value
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => onOpen(chart)}>Drill down →</Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {renderChart(chart)}
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -173,17 +224,7 @@ export default function AnalyticsPage() {
                 description="Visitor traffic, navigation usage, and QR insights."
                 breadcrumbs={[{ label: 'Analytics' }]}
             >
-                {/* Stat cards */}
-                <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {STAT_CARDS.map((s) => (
-                        <Card key={s.label}>
-                            <CardContent className="p-4">
-                                <div className="text-xs text-gray-400">{s.label}</div>
-                                <div className="mt-1 text-2xl font-semibold">{s.value}</div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+
 
                 {/* Tabs */}
                 <Tabs defaultValue="visitors">
@@ -195,15 +236,14 @@ export default function AnalyticsPage() {
 
                     <TabsContent value="visitors" className="mt-4">
                         <div className="grid gap-4 lg:grid-cols-2">
-                            {CHARTS.slice(0, 3).map((c) => (
-                                <ChartCard key={c.title} chart={c} onOpen={() => setDrill(c)} />
-                            ))}
+                            <VisitorsChartCard onOpen={(c) => setDrill(c)} />
+                            <ChartCard chart={CHARTS[0]} onOpen={() => setDrill(CHARTS[0])} />
                         </div>
                     </TabsContent>
 
                     <TabsContent value="qr" className="mt-4">
                         <div className="grid gap-4 lg:grid-cols-2">
-                            {CHARTS.slice(3, 6).map((c) => (
+                            {CHARTS.slice(1, 4).map((c) => (
                                 <ChartCard key={c.title} chart={c} onOpen={() => setDrill(c)} />
                             ))}
                         </div>
@@ -211,7 +251,7 @@ export default function AnalyticsPage() {
 
                     <TabsContent value="behavior" className="mt-4">
                         <div className="grid gap-4 lg:grid-cols-2">
-                            <ChartCard chart={CHARTS[6]} onOpen={() => setDrill(CHARTS[6])} />
+                            <ChartCard chart={CHARTS[4]} onOpen={() => setDrill(CHARTS[4])} />
                             <Card>
                                 <CardHeader><CardTitle>Average Navigation Time</CardTitle></CardHeader>
                                 <CardContent>

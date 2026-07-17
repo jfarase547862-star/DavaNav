@@ -3,7 +3,7 @@ import { Home, Search, QrCode, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
-  to: "/m/home" | "/m/search" | "/m/scan" | "/m/map";
+  to: "/mobile/mobile-home" | "/mobile/mobile-search" | "/mobile/mobile-scan" | "/mobile/mobile-map";
   label: string;
   icon: typeof Home;
   exact?: boolean;
@@ -11,10 +11,10 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { to: "/m/home", label: "Home", icon: Home, exact: true },
-  { to: "/m/search", label: "Search", icon: Search },
-  { to: "/m/scan", label: "QR", icon: QrCode, center: true },
-  { to: "/m/map", label: "Map", icon: Map },
+  { to: "/mobile/mobile-home", label: "Home", icon: Home, exact: true },
+  { to: "/mobile/mobile-search", label: "Search", icon: Search },
+  { to: "/mobile/mobile-scan", label: "QR", icon: QrCode, center: true },
+  { to: "/mobile/mobile-map", label: "Map", icon: Map },
 ];
 
 export function BottomNav() {

@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { SiteHeader, SiteFooter } from "@/components/site-layout";
+import { SiteHeader, SiteFooter } from "@/components/shared/site-layout";
 import { getOffice } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FloorMap } from "@/components/floor-map";
+import { FloorMap } from "@/components/shared/floor-map";
 import { QrCodeSvg } from "@/components/ui/qr-code-svg";
 import { ArrowLeft, MapPin, Phone, Mail, Clock, User, Navigation, QrCode } from "lucide-react";
 

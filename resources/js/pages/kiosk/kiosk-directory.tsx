@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { SiteFooter, SiteHeader } from '@/components/site-layout';
+import { SiteHeader } from '@/components/shared/site-layout';
 import {
   Search,
   MapPin,
@@ -9,7 +9,6 @@ import {
   Delete,
   Eye,
   Type,
-  Accessibility,
   Volume2,
 } from 'lucide-react';
 import { seedOffices } from '@/lib/mock-data';
@@ -103,7 +102,6 @@ export default function Directory() {
   const [keyboardVisible, setKeyboardVisible] = useState(true);
   const [textSize, setTextSize]       = useState<'normal' | 'large'>('normal');
   const [language, setLanguage]       = useState<'ENG' | 'CEB' | 'FIL'>('ENG');
-  const [accessibleRoute, setAccessibleRoute] = useState(false);
   const [voiceGuide, setVoiceGuide] = useState(false);
 
   const filtered = useMemo(() => {
@@ -428,7 +426,7 @@ export default function Directory() {
 
                       {/* CTA */}
                       <Link
-                        href="/kiosk/offices"
+                        href={`/kiosk/office/${selected.id}`}
                         className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-4 text-base font-semibold text-white transition active:scale-[0.99]"
                         style={{ background: BLUE }}
                       >

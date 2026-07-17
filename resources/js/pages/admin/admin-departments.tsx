@@ -4,7 +4,7 @@ import {
     Plus, Search, Download, Upload, Eye, Edit, Trash2,
     ChevronLeft, ChevronRight, ArrowUpDown, MoreVertical,
 } from 'lucide-react';
-import { AdminShell, StatusBadge } from '@/components/admin/admin-shell';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -18,18 +18,47 @@ import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
+/**
+ * Fields below follow Table 10 (Departments) from the DavaNav Data Model →
+ * Interface Mapping doc, Section C:
+ *   department_name   -> "Department Name" input
+ *   department_type   -> "Internal/External" radio or dropdown
+ *   department_oic    -> "Office in Charge" input
+ *   description       -> "Description" textarea
+ *   contact_no        -> "Contact Number" input
+ *   email             -> "Email" input
+ *
+ * `officeCount` is NOT a Departments column — it's a derived, read-only
+ * count sourced from the Offices table (Table 12) via its department_id
+ * foreign key, so it's shown in the list but excluded from the form.
+ *
+ * `floor` and `status` (Active/Inactive) were dropped: floor belongs to
+ * Floors/Offices (Tables 11–12), not Departments, and no status field is
+ * defined for Table 10 in the data dictionary.
+ *
+ * department_type doubles as the branch point in Section B of the mapping
+ * doc: Internal departments are guided via Navigation Routes (Table 16,
+ * A* indoor routing); External departments are guided via External Office
+ * (Table 13 — address, jeepney routes, landmark).
+ */
+
+type DepartmentType = 'Internal' | 'External';
+
 interface Department {
     id: string;
-    name: string;
-    head: string;
-    floor: string;
-    officeCount: number;
-    status: 'Active' | 'Inactive';
+    department_name: string;
+    department_type: DepartmentType;
+    department_oic: string;
+    description: string;
+    contact_no: string;
+    email: string;
+    officeCount: number; // derived from Offices (department_id FK) — display only
 }
 
 interface Props {
@@ -37,26 +66,41 @@ interface Props {
 }
 
 const mockDepartments: Department[] = [
-    { id: '1', name: 'Civil Registry', head: 'Juan dela Cruz', floor: '1F', officeCount: 3, status: 'Active' },
-    { id: '2', name: 'Treasury', head: 'Maria Santos', floor: '1F', officeCount: 2, status: 'Active' },
-    { id: '3', name: 'Assessor', head: 'Pedro Reyes', floor: '2F', officeCount: 4, status: 'Active' },
-    { id: '4', name: 'Health', head: 'Ana Garcia', floor: '1F', officeCount: 2, status: 'Active' },
-    { id: '5', name: 'Engineering', head: 'Carlos Mendoza', floor: '3F', officeCount: 3, status: 'Inactive' },
-    { id: '6', name: 'Social Welfare', head: 'Rosa Lim', floor: '2F', officeCount: 2, status: 'Active' },
-    { id: '7', name: "Mayor's Office", head: 'Jose Ramos', floor: '4F', officeCount: 5, status: 'Active' },
-    { id: '8', name: 'Business Permits', head: 'Linda Cruz', floor: '2F', officeCount: 2, status: 'Active' },
+    { id: '1', department_name: 'Civil Registry', department_type: 'Internal', department_oic: 'Juan dela Cruz', description: 'Handles birth, marriage, and death registration.', contact_no: '(082) 227-1000', email: 'civilregistry@davaocity.gov.ph', officeCount: 3 },
+    { id: '2', department_name: 'Treasury', department_type: 'Internal', department_oic: 'Maria Santos', description: 'Collects local taxes and fees.', contact_no: '(082) 227-1001', email: 'treasury@davaocity.gov.ph', officeCount: 2 },
+    { id: '3', department_name: 'Assessor', department_type: 'Internal', department_oic: 'Pedro Reyes', description: 'Assesses real property for taxation.', contact_no: '(082) 227-1002', email: 'assessor@davaocity.gov.ph', officeCount: 4 },
+    { id: '4', department_name: 'City Health Office', department_type: 'Internal', department_oic: 'Ana Garcia', description: 'Public health services and clinics.', contact_no: '(082) 227-1003', email: 'health@davaocity.gov.ph', officeCount: 2 },
+    { id: '5', department_name: 'City Engineering', department_type: 'Internal', department_oic: 'Carlos Mendoza', description: 'Building permits and public works.', contact_no: '(082) 227-1004', email: 'engineering@davaocity.gov.ph', officeCount: 3 },
+    { id: '6', department_name: 'Social Welfare (Satellite)', department_type: 'External', department_oic: 'Rosa Lim', description: 'Satellite office serving Barangay Buhangin residents.', contact_no: '(082) 227-1005', email: 'cswdo.buhangin@davaocity.gov.ph', officeCount: 1 },
+    { id: '7', department_name: "Mayor's Office", department_type: 'Internal', department_oic: 'Jose Ramos', description: 'Office of the City Mayor.', contact_no: '(082) 227-1006', email: 'mayor@davaocity.gov.ph', officeCount: 5 },
+    { id: '8', department_name: 'Business Permits (One-Stop Shop)', department_type: 'External', department_oic: 'Linda Cruz', description: 'Off-site BPLO branch near SM Ecoland.', contact_no: '(082) 227-1007', email: 'bplo.oss@davaocity.gov.ph', officeCount: 1 },
 ];
 
 const empty: Department = {
-    id: '', name: '', head: '', floor: '1F', officeCount: 0, status: 'Active',
+    id: '', department_name: '', department_type: 'Internal', department_oic: '',
+    description: '', contact_no: '', email: '', officeCount: 0,
 };
+
+function TypeBadge({ type }: { type: DepartmentType }) {
+    const isInternal = type === 'Internal';
+    return (
+        <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                isInternal
+                    ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200'
+                    : 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
+            }`}
+        >
+            {type}
+        </span>
+    );
+}
 
 export default function AdminDepartments({ departments: initialDepartments = mockDepartments }: Props) {
     const [departments, setDepartments] = useState<Department[]>(initialDepartments);
     const [q, setQ] = useState('');
-    const [floorFilter, setFloorFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [sortKey, setSortKey] = useState<keyof Department>('name');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [sortKey, setSortKey] = useState<keyof Department>('department_name');
     const [sortAsc, setSortAsc] = useState(true);
     const [page, setPage] = useState(1);
     const pageSize = 6;
@@ -70,18 +114,17 @@ export default function AdminDepartments({ departments: initialDepartments = moc
 
     const filtered = useMemo(() => {
         let list = departments.filter((d) =>
-            d.name.toLowerCase().includes(q.toLowerCase()) ||
-            d.head.toLowerCase().includes(q.toLowerCase())
+            d.department_name.toLowerCase().includes(q.toLowerCase()) ||
+            d.department_oic.toLowerCase().includes(q.toLowerCase())
         );
-        if (floorFilter !== 'all') list = list.filter((d) => d.floor === floorFilter);
-        if (statusFilter !== 'all') list = list.filter((d) => d.status === statusFilter);
+        if (typeFilter !== 'all') list = list.filter((d) => d.department_type === typeFilter);
         list = [...list].sort((a, b) => {
             const av = String(a[sortKey]);
             const bv = String(b[sortKey]);
             return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
         });
         return list;
-    }, [departments, q, floorFilter, statusFilter, sortKey, sortAsc]);
+    }, [departments, q, typeFilter, sortKey, sortAsc]);
 
     const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
     const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -95,7 +138,7 @@ export default function AdminDepartments({ departments: initialDepartments = moc
     function openEdit(d: Department) { setCurrent(d); setEditOpen(true); }
 
     function save() {
-        if (!current.name.trim() || !current.head.trim()) {
+        if (!current.department_name.trim() || !current.department_oic.trim()) {
             toast.error('Please complete all required fields');
             return;
         }
@@ -118,9 +161,9 @@ export default function AdminDepartments({ departments: initialDepartments = moc
     }
 
     function exportCsv() {
-        const header = 'Name,Head,Floor,Offices,Status\n';
+        const header = 'Department Name,Type,Office in Charge,Contact No.,Email,Offices\n';
         const rows = filtered.map((d) =>
-            `"${d.name}","${d.head}","${d.floor}","${d.officeCount}","${d.status}"`
+            `"${d.department_name}","${d.department_type}","${d.department_oic}","${d.contact_no}","${d.email}","${d.officeCount}"`
         ).join('\n');
         const blob = new Blob([header + rows], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -163,22 +206,12 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                                 className="pl-9"
                             />
                         </div>
-                        <Select value={floorFilter} onValueChange={(v) => { setFloorFilter(v); setPage(1); }}>
-                            <SelectTrigger className="w-32"><SelectValue placeholder="Floor" /></SelectTrigger>
+                        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+                            <SelectTrigger className="w-40"><SelectValue placeholder="Type" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All floors</SelectItem>
-                                <SelectItem value="1F">1F</SelectItem>
-                                <SelectItem value="2F">2F</SelectItem>
-                                <SelectItem value="3F">3F</SelectItem>
-                                <SelectItem value="4F">4F</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                            <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All status</SelectItem>
-                                <SelectItem value="Active">Active</SelectItem>
-                                <SelectItem value="Inactive">Inactive</SelectItem>
+                                <SelectItem value="all">All types</SelectItem>
+                                <SelectItem value="Internal">Internal</SelectItem>
+                                <SelectItem value="External">External</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -189,22 +222,22 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>
-                                        <button className="flex items-center gap-1" onClick={() => toggleSort('name')}>
+                                        <button className="flex items-center gap-1" onClick={() => toggleSort('department_name')}>
                                             Department Name <ArrowUpDown className="h-3 w-3" />
                                         </button>
                                     </TableHead>
                                     <TableHead>
-                                        <button className="flex items-center gap-1" onClick={() => toggleSort('head')}>
-                                            OIC <ArrowUpDown className="h-3 w-3" />
+                                        <button className="flex items-center gap-1" onClick={() => toggleSort('department_type')}>
+                                            Type <ArrowUpDown className="h-3 w-3" />
                                         </button>
                                     </TableHead>
                                     <TableHead>
-                                        <button className="flex items-center gap-1" onClick={() => toggleSort('floor')}>
-                                            Floor <ArrowUpDown className="h-3 w-3" />
+                                        <button className="flex items-center gap-1" onClick={() => toggleSort('department_oic')}>
+                                            Office in Charge <ArrowUpDown className="h-3 w-3" />
                                         </button>
                                     </TableHead>
+                                    <TableHead>Contact</TableHead>
                                     <TableHead>Offices</TableHead>
-                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -218,11 +251,14 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                                 )}
                                 {pageItems.map((d) => (
                                     <TableRow key={d.id}>
-                                        <TableCell className="font-medium">{d.name}</TableCell>
-                                        <TableCell>{d.head}</TableCell>
-                                        <TableCell>{d.floor}</TableCell>
+                                        <TableCell className="font-medium">{d.department_name}</TableCell>
+                                        <TableCell><TypeBadge type={d.department_type} /></TableCell>
+                                        <TableCell>{d.department_oic}</TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">
+                                            <div>{d.contact_no}</div>
+                                            <div>{d.email}</div>
+                                        </TableCell>
                                         <TableCell>{d.officeCount}</TableCell>
-                                        <TableCell><StatusBadge status={d.status} /></TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -277,33 +313,57 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                         <div className="grid gap-3">
                             <div className="space-y-1">
                                 <Label>Department Name *</Label>
-                                <Input value={current.name} onChange={(e) => setCurrent({ ...current, name: e.target.value })} />
+                                <Input
+                                    value={current.department_name}
+                                    onChange={(e) => setCurrent({ ...current, department_name: e.target.value })}
+                                />
                             </div>
                             <div className="space-y-1">
-                                <Label>OIC *</Label>
-                                <Input value={current.head} onChange={(e) => setCurrent({ ...current, head: e.target.value })} />
-                            </div>
-                            <div className="space-y-1">
-                                <Label>Floor</Label>
-                                <Select value={current.floor} onValueChange={(v) => setCurrent({ ...current, floor: v })}>
+                                <Label>Internal / External *</Label>
+                                <Select
+                                    value={current.department_type}
+                                    onValueChange={(v) => setCurrent({ ...current, department_type: v as DepartmentType })}
+                                >
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="1F">1F</SelectItem>
-                                        <SelectItem value="2F">2F</SelectItem>
-                                        <SelectItem value="3F">3F</SelectItem>
-                                        <SelectItem value="4F">4F</SelectItem>
+                                        <SelectItem value="Internal">Internal (inside City Hall)</SelectItem>
+                                        <SelectItem value="External">External (outside City Hall)</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Internal departments are guided via indoor turn-by-turn navigation.
+                                    External departments show address, jeepney routes, and nearest landmark instead.
+                                </p>
                             </div>
                             <div className="space-y-1">
-                                <Label>Status</Label>
-                                <Select value={current.status} onValueChange={(v) => setCurrent({ ...current, status: v as 'Active' | 'Inactive' })}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Active">Active</SelectItem>
-                                        <SelectItem value="Inactive">Inactive</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label>Office in Charge *</Label>
+                                <Input
+                                    value={current.department_oic}
+                                    onChange={(e) => setCurrent({ ...current, department_oic: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Description</Label>
+                                <Textarea
+                                    value={current.description}
+                                    onChange={(e) => setCurrent({ ...current, description: e.target.value })}
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Contact Number</Label>
+                                <Input
+                                    value={current.contact_no}
+                                    onChange={(e) => setCurrent({ ...current, contact_no: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Email</Label>
+                                <Input
+                                    type="email"
+                                    value={current.email}
+                                    onChange={(e) => setCurrent({ ...current, email: e.target.value })}
+                                />
                             </div>
                         </div>
                         <DialogFooter>
@@ -318,14 +378,17 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                 <Dialog open={viewOpen} onOpenChange={setViewOpen}>
                     <DialogContent className="bg-white">
                         <DialogHeader>
-                            <DialogTitle>{current.name}</DialogTitle>
+                            <DialogTitle>{current.department_name}</DialogTitle>
                             <DialogDescription>Department details</DialogDescription>
                         </DialogHeader>
                         <dl className="grid grid-cols-2 gap-3 text-sm">
-                            <dt className="text-muted-foreground">OIC</dt><dd>{current.head}</dd>
-                            <dt className="text-muted-foreground">Floor</dt><dd>{current.floor}</dd>
+                            <dt className="text-muted-foreground">Type</dt>
+                            <dd><TypeBadge type={current.department_type} /></dd>
+                            <dt className="text-muted-foreground">Office in Charge</dt><dd>{current.department_oic}</dd>
+                            <dt className="text-muted-foreground">Description</dt><dd className="col-span-2">{current.description || '—'}</dd>
+                            <dt className="text-muted-foreground">Contact Number</dt><dd>{current.contact_no || '—'}</dd>
+                            <dt className="text-muted-foreground">Email</dt><dd>{current.email || '—'}</dd>
                             <dt className="text-muted-foreground">Office Count</dt><dd>{current.officeCount}</dd>
-                            <dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={current.status} /></dd>
                         </dl>
                         <DialogFooter>
                             <Button onClick={() => setViewOpen(false)}>Close</Button>
@@ -359,7 +422,7 @@ export default function AdminDepartments({ departments: initialDepartments = moc
                         <DialogHeader>
                             <DialogTitle>Delete department?</DialogTitle>
                             <DialogDescription>
-                                This will permanently remove "{delTarget?.name}". This action cannot be undone.
+                                This will permanently remove "{delTarget?.department_name}". This action cannot be undone.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>

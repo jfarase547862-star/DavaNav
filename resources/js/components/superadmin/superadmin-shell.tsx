@@ -1,9 +1,9 @@
 import { Link, usePage, router } from "@inertiajs/react";
 import {
   LayoutDashboard, Users, BarChart3, Bell, Settings, Menu,
-  ChevronRight, ArrowLeft, Home, X, Database, Cloud, Zap,
+  ChevronRight, ArrowLeft, Home, X, Database, Cloud, Zap, ClipboardList,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,19 +17,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const NAV = [
-  { id: "dashboard",   to: "/superadmin/dashboard", label: "Dashboard",         icon: LayoutDashboard, exact: true },
-  { id: "users",       to: "/superadmin/admin-accounts",     label: "Admin Accounts",    icon: Users },
-  { id: "settings",    to: "/superadmin/system-settings",  label: "System Settings",   icon: Settings },
-  { id: "database",    to: "/superadmin/database-schema", label: "Database Schema",   icon: Database },
-  { id: "deployment",  to: "/superadmin/deployment", label: "Deployment",        icon: Zap },
-  { id: "performance", to: "/superadmin/performance", label: "Performance",       icon: BarChart3 },
-  { id: "backup",      to: "/superadmin/backup-recovery", label: "Backup & Recovery", icon: Cloud },
+interface NavItem {
+  id: string;
+  to: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  exact?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [
+      { id: "dashboard", to: "/superadmin/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { id: "users", to: "/superadmin/admin-accounts", label: "Admin Accounts", icon: Users },
+      { id: "audit", to: "/superadmin/audit-logs", label: "Audit Logs", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { id: "settings", to: "/superadmin/system-settings", label: "System Settings", icon: Settings },
+      { id: "database", to: "/superadmin/database-schema", label: "Database Schema", icon: Database },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { id: "deployment", to: "/superadmin/deployment", label: "Deployment", icon: Zap },
+      { id: "performance", to: "/superadmin/performance", label: "Performance", icon: BarChart3 },
+      { id: "backup", to: "/superadmin/backup-recovery", label: "Backup & Recovery", icon: Cloud },
+    ],
+  },
 ];
 
-// Only the first NAV item for a given route counts as "active" for that route,
-// so items sharing a href (e.g. Dashboard / Database Schema / Backup & Recovery
-// all pointing at /superadmin/dashboard) don't all light up at once.
+const NAV = NAV_GROUPS.flatMap((group) => group.items);
+
 const PRIMARY_ID_FOR_ROUTE = NAV.reduce<Record<string, string>>((acc, item) => {
   if (!acc[item.to]) acc[item.to] = item.id;
   return acc;
@@ -69,7 +102,7 @@ export function SuperadminShell({ title, description, breadcrumbs = [], actions,
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-yellow-400 font-bold text-gray-900">S</div>
           {open && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Superadmin Console</div>
+              <div className="text-sm font-semibold">Superadmin</div>
               <div className="text-[11px] text-white/60">Davao City Hall</div>
             </div>
           )}
@@ -81,26 +114,37 @@ export function SuperadminShell({ title, description, breadcrumbs = [], actions,
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const isPrimaryForRoute = PRIMARY_ID_FOR_ROUTE[item.to] === item.id;
-            const active = isPrimaryForRoute && isActive(item.to, item.exact);
-            return (
-              <Link
-                key={item.id}
-                href={item.to}
-                className={cn(
-                  "mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  active
-                    ? "bg-yellow-400 text-gray-900 font-medium"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {open && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
+          {NAV_GROUPS.map((group, groupIndex) => (
+            <div key={group.label} className={cn(groupIndex > 0 && "mt-4")}>
+              {open ? (
+                <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  {group.label}
+                </div>
+              ) : (
+                groupIndex > 0 && <div className="mx-3 mb-2 border-t border-white/10" />
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isPrimaryForRoute = PRIMARY_ID_FOR_ROUTE[item.to] === item.id;
+                const active = isPrimaryForRoute && isActive(item.to, item.exact);
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.to}
+                    className={cn(
+                      "mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "bg-yellow-400 text-gray-900 font-medium"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {open && <span className="truncate">{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 
@@ -111,7 +155,7 @@ export function SuperadminShell({ title, description, breadcrumbs = [], actions,
           </Button>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/superadmin/notifications">
+            <Link href="/superadmin/supadmin-notifications">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
               </Button>
@@ -133,10 +177,10 @@ export function SuperadminShell({ title, description, breadcrumbs = [], actions,
                 <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/superadmin/settings">Settings</Link>
+                  <Link href="/superadmin/supadmin-settings">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/superadmin/dashboard">Dashboard</Link>
+                  <Link href="/superadmin/supadmin-dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
@@ -150,7 +194,7 @@ export function SuperadminShell({ title, description, breadcrumbs = [], actions,
         <main className="flex-1 p-4 md:p-6">
           {breadcrumbs.length > 0 && (
             <div className="mb-4 flex items-center gap-1 text-xs text-gray-400">
-              <Link href="/superadmin/dashboard" className="flex items-center gap-1 hover:text-gray-700">
+              <Link href="/superadmin/supadmin-dashboard" className="flex items-center gap-1 hover:text-gray-700">
                 <Home className="h-3 w-3" /> Superadmin
               </Link>
               {breadcrumbs.map((b, i) => (

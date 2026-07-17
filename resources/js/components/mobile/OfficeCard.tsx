@@ -2,6 +2,8 @@ import { Link } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, Navigation, Info, Star } from "lucide-react";
 import type { Office } from "@/lib/mock-data";
+import { getActiveServicesForOffice } from "@/lib/mock-data";
+import { OfficeServicesPanel } from "@/components/shared/office-services-panel";
 import { useFavorites } from "@/hooks/use-favorites";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +14,8 @@ export function OfficeCard({ office }: Readonly<{ office: Office }>) {
     if (!office.internal) return 'External Office';
     return office.floor === 1 ? 'Floor 1 · Ground' : `Floor ${office.floor} · Floor`;
   })();
+
+  const services = getActiveServicesForOffice(office.id);
 
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-elevated)]">
@@ -44,19 +48,13 @@ export function OfficeCard({ office }: Readonly<{ office: Office }>) {
         </button>
       </div>
 
-      {office.services && office.services.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-1.5">
-          {office.services.slice(0, 3).map((s) => (
-            <li key={s} className="rounded-md bg-muted px-2 py-1 text-[11px] text-foreground/80">
-              {s}
-            </li>
-          ))}
-          {office.services.length > 3 && (
-            <li className="rounded-md px-2 py-1 text-[11px] text-muted-foreground">
-              +{office.services.length - 3} more
-            </li>
+      {services.length > 0 && (
+        <div className="mt-3">
+          <OfficeServicesPanel services={services.slice(0, 3)} compact />
+          {services.length > 3 && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">+{services.length - 3} more services</p>
           )}
-        </ul>
+        </div>
       )}
 
       <div className="mt-4 flex gap-2">

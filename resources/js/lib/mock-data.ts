@@ -1,7 +1,6 @@
 // Mock data for DavaNav Solution — Davao City Hall
 
-
-
+import type { OfficeService } from '@/types/service';
 
 export type Status = "Active" | "Inactive";
 
@@ -1113,6 +1112,60 @@ export function getOffice(id: string) {
   return seedOffices.find((o) => o.id === id);
 }
 
+// ── Office Services (data dictionary) ─────────────────────────────────────────
+
+export type { OfficeService };
+
+const DEFAULT_SERVICE_REQUIREMENTS =
+  'Valid government-issued ID, completed application form, and any supporting documents listed by the office.';
+const DEFAULT_SERVICE_PROCESSING_TIME = '1–3 working days';
+
+export const officeNumericIds: Record<string, number> = Object.fromEntries(
+  seedOffices.map((office, index) => [office.id, index + 1]),
+);
+
+function buildServiceRecord(
+  serviceId: number,
+  officeId: number,
+  serviceName: string,
+  status: OfficeService['status'] = 'Active',
+): OfficeService {
+  return {
+    service_id: serviceId,
+    office_id: officeId,
+    service_name: serviceName,
+    description: `Processing and issuance support for ${serviceName.toLowerCase()} at this office branch.`,
+    requirements: DEFAULT_SERVICE_REQUIREMENTS,
+    processing_time: DEFAULT_SERVICE_PROCESSING_TIME,
+    status,
+  };
+}
+
+export const seedServices: OfficeService[] = seedOffices.flatMap((office, officeIndex) => {
+  const officeId = officeIndex + 1;
+  return (office.services ?? []).map((serviceName, serviceIndex) =>
+    buildServiceRecord(officeId * 100 + serviceIndex + 1, officeId, serviceName),
+  );
+});
+
+export function getOfficeNumericId(officeId: string): number | undefined {
+  return officeNumericIds[officeId];
+}
+
+export function getServicesForOffice(officeId: string): OfficeService[] {
+  const numericId = getOfficeNumericId(officeId);
+  if (!numericId) return [];
+  return seedServices.filter((service) => service.office_id === numericId);
+}
+
+export function getActiveServicesForOffice(officeId: string): OfficeService[] {
+  return getServicesForOffice(officeId).filter((service) => service.status === 'Active');
+}
+
+export function getServiceNamesForOffice(officeId: string): string[] {
+  return getServicesForOffice(officeId).map((service) => service.service_name);
+}
+
 export const FLOOR_LAYOUT = {
   entrance: { x: 1, y: 5 },
   stairs: { x: 7, y: 4 },
@@ -1359,8 +1412,8 @@ export function recommendService(query: string): ServiceRecommendation[] {
       [office.name.toLowerCase(), `the office name "${office.name}"`],
       [(office.department ?? "").toLowerCase(), `the department "${office.department}"`],
     ];
-    (office.services ?? []).forEach((s) =>
-      haystacks.push([s.toLowerCase(), `the service "${s}"`]),
+    getServicesForOffice(office.id).forEach((service) =>
+      haystacks.push([service.service_name.toLowerCase(), `the service "${service.service_name}"`]),
     );
 
     for (const [haystack, label] of haystacks) {
@@ -1376,4 +1429,50 @@ export function recommendService(query: string): ServiceRecommendation[] {
   }
 
   return Array.from(scored.values()).sort((a, b) => b.score - a.score);
+}
+// ── Scan Logs (Table 19) ────────────────────────────────────────────────────
+
+export interface ScanLog {
+  logId: string;         // log_id (PK)
+  sessionId: string;      // session_id — FK -> Visitor_Sessions.session_id
+  qrId: string;            // qr_id — FK -> QR_Codes.qr_id
+  officeId: string | null; // office_id — FK -> Offices.office_id
+  scannedAt: string;        // scanned_at — DEFAULT CURRENT_TIMESTAMP
+}
+
+// Deterministic mock generator so each QR code has a believable scan trail
+// tied to its own `scans` count, without needing a real Visitor_Sessions table yet.
+function buildScanLogsForQr(qr: QrCode, count: number): ScanLog[] {
+  return Array.from({ length: count }).map((_, i) => {
+    const minutesAgo = i * 7 + 2;
+    const scannedAt = new Date(Date.now() - minutesAgo * 60_000).toISOString();
+    return {
+      logId: `sl-${qr.id}-${i}`,
+      sessionId: `sess-${qr.id}-${1000 + i}`,
+      qrId: qr.id,
+      officeId: qr.officeId,
+      scannedAt,
+    };
+  });
+}
+
+export const seedScanLogs: ScanLog[] = seedQrCodes.flatMap((qr) =>
+  buildScanLogsForQr(qr, Math.min(8, Math.max(1, Math.round(qr.scans / 25)))),
+);
+
+export function getScanLogsForQr(qrId: string): ScanLog[] {
+  return seedScanLogs
+    .filter((log) => log.qrId === qrId)
+    .sort((a, b) => +new Date(b.scannedAt) - +new Date(a.scannedAt));
+}
+
+export function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
 }
